@@ -1,0 +1,3 @@
+﻿<Project>
+  <Import Project="..\build\BookNook.props" />
+</Project>

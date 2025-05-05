@@ -1,0 +1,167 @@
+﻿@model IEnumerable<BookHive.Models.ApplicationUser>
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<BookHive.Models.ApplicationUser> UserManager
+
+@{
+    ViewData["Title"] = "Admin Dashboard";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<style>
+    .user-list {
+        max-height: 500px;
+        overflow-y: auto;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 10px;
+    }
+
+    .user-item {
+        display: flex;
+        align-items: center;
+        padding: 10px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+        .user-item:last-child {
+            border-bottom: none;
+        }
+
+        .user-item img {
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .user-item .no-image {
+            width: 40px;
+            height: 40px;
+            background-color: #e5e7eb;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            font-size: 12px;
+            color: #4b5563;
+        }
+
+    .user-details {
+        flex-grow: 1;
+    }
+
+    .user-actions {
+        display: flex;
+        gap: 10px;
+    }
+
+    .filter-buttons {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .filter-button {
+        padding: 8px 16px;
+        background-color: #d97706;
+        color: white;
+        border-radius: 6px;
+        font-weight: 500;
+        transition: background-color 0.3s;
+    }
+
+        .filter-button:hover {
+            background-color: #b45309;
+        }
+
+        .filter-button.active {
+            background-color: #b45309;
+        }
+</style>
+
+<div class="container mx-auto px-4 py-6">
+    <h2 class="text-2xl font-bold text-amber-900 mb-6 text-center">Admin Dashboard</h2>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="bg-green-100 text-green-700 p-4 rounded-lg mb-4 text-center">
+            @TempData["SuccessMessage"]
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="bg-red-100 text-red-700 p-4 rounded-lg mb-4 text-center">
+            @TempData["ErrorMessage"]
+        </div>
+    }
+
+    <!-- Manage Users Section -->
+    <h3 class="text-xl font-semibold text-amber-800 mb-4">Manage Users</h3>
+
+    <!-- Filter Buttons -->
+    <div class="filter-buttons">
+        <button class="filter-button active" onclick="filterUsers('all')">All Users</button>
+        <button class="filter-button" onclick="filterUsers('Admin')">Admins</button>
+        <button class="filter-button" onclick="filterUsers('Staff')">Staff</button>
+        <button class="filter-button" onclick="filterUsers('Member')">Members</button>
+    </div>
+
+    <!-- User List -->
+    <div class="user-list">
+        @foreach (var user in Model)
+        {
+            var roles = await UserManager.GetRolesAsync(user);
+            var roleClass = roles.Any() ? string.Join(" ", roles) : "NoRole";
+            <div class="user-item @roleClass" data-roles="@roleClass">
+                @if (!string.IsNullOrEmpty(user.ProfileImageUrl))
+                {
+                    <img src="@user.ProfileImageUrl" alt="@user.UserName" />
+                }
+                else
+                {
+                    <div class="no-image">
+                        <span>No Image</span>
+                    </div>
+                }
+                <div class="user-details">
+                    <h4 class="text-base font-semibold text-amber-800">@user.UserName</h4>
+                    <p class="text-gray-600 text-sm">Email: @user.Email</p>
+                    <p class="text-gray-600 text-sm">Roles: @(roles.Any() ? string.Join(", ", roles) : "None")</p>
+                </div>
+                <div class="user-actions">
+                    <a asp-action="ViewProfile" asp-route-id="@user.Id" class="inline-block bg-amber-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-amber-700 text-sm">View Profile</a>
+                    <a asp-action="SendDeletionNotice" asp-route-id="@user.Id" class="inline-block bg-red-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-red-700 text-sm">Send Deletion Notice</a>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function filterUsers(role) {
+            // Update button styles
+            document.querySelectorAll('.filter-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            document.querySelector(`button[onclick="filterUsers('${role}')"]`).classList.add('active');
+
+            // Show/hide users based on role
+            const userItems = document.querySelectorAll('.user-item');
+            userItems.forEach(item => {
+                if (role === 'all') {
+                    item.style.display = 'flex';
+                } else {
+                    const roles = item.getAttribute('data-roles').split(' ');
+                    item.style.display = roles.includes(role) ? 'flex' : 'none';
+                }
+            });
+        }
+
+        // Initialize with all users visible
+        filterUsers('all');
+    </script>
+}

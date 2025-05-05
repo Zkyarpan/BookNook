@@ -1,0 +1,50 @@
+﻿@model IEnumerable<BookHive.Models.TimedAnnouncement>
+
+@{
+    ViewData["Title"] = "Announcements";
+}
+
+<div class="container mx-auto px-4 py-6">
+    <h2 class="text-2xl font-bold text-center text-amber-900 mb-6">Announcements</h2>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="bg-green-100 text-green-700 p-2 rounded mb-4 text-center text-sm">
+            @TempData["SuccessMessage"]
+        </div>
+    }
+
+    @if (User.IsInRole("Admin"))
+    {
+        <div class="text-center mb-4">
+            <a asp-action="Create" class="inline-block bg-amber-600 text-white font-medium text-sm py-1.5 px-3 rounded hover:bg-amber-700">Create New Announcement</a>
+        </div>
+    }
+
+    @if (!Model.Any())
+    {
+        <p class="text-center text-gray-600 text-sm">No active announcements.</p>
+    }
+    else
+    {
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            @foreach (var announcement in Model)
+            {
+                <div class="bg-amber-50 rounded-lg shadow-md p-4 flex flex-col">
+                    <h3 class="text-base font-semibold text-amber-800 mb-2">@announcement.Title</h3>
+                    <p class="text-gray-600 text-sm mb-2 flex-grow">@announcement.Message</p>
+                    <p class="text-gray-500 text-xs mb-2">Created: @announcement.CreatedAt.ToString("d MMM yyyy HH:mm")</p>
+                    <p class="text-gray-500 text-xs mb-2">Starts: @announcement.StartDate.ToString("d MMM yyyy HH:mm")</p>
+                    <p class="text-gray-500 text-xs mb-2">Expires: @announcement.ExpiresAt.ToString("d MMM yyyy HH:mm")</p>
+                    @if (User.IsInRole("Admin"))
+                    {
+                        <div class="flex space-x-1">
+                            <a asp-action="Edit" asp-route-id="@announcement.Id" class="inline-block bg-amber-600 text-white font-medium text-xs py-1 px-2 rounded hover:bg-amber-700 text-center flex-1">Edit</a>
+                            <a asp-action="Delete" asp-route-id="@announcement.Id" class="inline-block bg-red-600 text-white font-medium text-xs py-1 px-2 rounded hover:bg-red-700 text-center flex-1">Delete</a>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>

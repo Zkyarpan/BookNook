@@ -1,0 +1,79 @@
+﻿@model BookHive.Models.BookViewModel
+
+@{
+    ViewData["Title"] = "Edit Book";
+}
+
+<div class="container mx-auto px-4 py-6">
+    <h2 class="text-2xl font-bold text-center text-amber-900 mb-6">Edit Book</h2>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="bg-green-100 text-green-700 p-2 rounded mb-4 text-center text-sm">
+            @TempData["SuccessMessage"]
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="bg-red-100 text-red-700 p-2 rounded mb-4 text-center text-sm">
+            @TempData["ErrorMessage"]
+        </div>
+    }
+
+    <div class="bg-amber-50 rounded-lg shadow-md p-6 max-w-lg mx-auto">
+        <form asp-action="Edit" method="post" enctype="multipart/form-data">
+            <input type="hidden" asp-for="Id" />
+            <input type="hidden" asp-for="CoverImageUrl" />
+
+            <div class="mb-4">
+                <label asp-for="Title" class="block text-gray-700 text-sm font-semibold mb-2"></label>
+                <input asp-for="Title" class="w-full p-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
+                <span asp-validation-for="Title" class="text-red-600 text-sm"></span>
+            </div>
+
+            <div class="mb-4">
+                <label asp-for="Author" class="block text-gray-700 text-sm font-semibold mb-2"></label>
+                <input asp-for="Author" class="w-full p-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
+                <span asp-validation-for="Author" class="text-red-600 text-sm"></span>
+            </div>
+
+            <div class="mb-4">
+                <label asp-for="Description" class="block text-gray-700 text-sm font-semibold mb-2"></label>
+                <textarea asp-for="Description" class="w-full p-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" rows="5"></textarea>
+                <span asp-validation-for="Description" class="text-red-600 text-sm"></span>
+            </div>
+
+            <div class="mb-4">
+                <label asp-for="Price" class="block text-gray-700 text-sm font-semibold mb-2"></label>
+                <input asp-for="Price" type="number" step="0.01" class="w-full p-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
+                <span asp-validation-for="Price" class="text-red-600 text-sm"></span>
+            </div>
+
+            <div class="mb-4">
+                <label asp-for="Quantity" class="block text-gray-700 text-sm font-semibold mb-2"></label>
+                <input asp-for="Quantity" type="number" class="w-full p-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
+                <span asp-validation-for="Quantity" class="text-red-600 text-sm"></span>
+            </div>
+
+            <div class="mb-4">
+                <label asp-for="CoverImage" class="block text-gray-700 text-sm font-semibold mb-2">Cover Image</label>
+                @if (!string.IsNullOrEmpty(Model.CoverImageUrl))
+                {
+                    <img src="@Model.CoverImageUrl" alt="Current Cover" class="w-32 h-32 object-cover rounded mb-2" />
+                }
+                <input asp-for="CoverImage" type="file" class="w-full p-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
+                <span asp-validation-for="CoverImage" class="text-red-600 text-sm"></span>
+            </div>
+
+            <div class="text-center">
+                <button type="submit" class="inline-block bg-amber-600 text-white font-medium text-sm py-1.5 px-3 rounded hover:bg-amber-700">Save Changes</button>
+                <a asp-action="Index" class="inline-block bg-gray-500 text-white font-medium text-sm py-1.5 px-3 rounded hover:bg-gray-600 ml-2">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

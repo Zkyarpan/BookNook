@@ -1,0 +1,218 @@
+﻿@model IEnumerable<BookHive.Models.Order>
+
+@{
+    ViewData["Title"] = "My Orders";
+}
+
+<style>
+    .order-checkbox:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* Tab styles */
+    .tab {
+        padding: 8px 16px;
+        margin-right: 8px;
+        border: 1px solid #d1d5db;
+        border-radius: 5px 5px 0 0;
+        background-color: #f5f5f5;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+
+        .tab.active {
+            background-color: #fff;
+            border-bottom: 1px solid #fff;
+            font-weight: 600;
+        }
+
+        .tab:hover:not(.active) {
+            background-color: #e5e7eb;
+        }
+
+    /* Hide orders by default, will show based on active tab */
+    .order-item {
+        display: none;
+    }
+
+        .order-item.visible {
+            display: flex;
+        }
+</style>
+
+<div class="container mx-auto px-4 py-6">
+    <h2 class="text-2xl font-bold text-center text-amber-900 mb-6">My Orders</h2>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="bg-green-100 text-green-700 p-2 rounded mb-4 text-center text-sm">
+            @TempData["SuccessMessage"]
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="bg-red-100 text-red-700 p-2 rounded mb-4 text-center text-sm">
+            @TempData["ErrorMessage"]
+        </div>
+    }
+
+    @if (!Model.Any())
+    {
+        <p class="text-center text-gray-600 text-sm">You have no orders.</p>
+    }
+    else
+    {
+        <!-- Tabs for filtering orders -->
+        <div class="flex mb-4">
+            <button class="tab active" onclick="filterOrders('Placed')">Placed</button>
+            <button class="tab" onclick="filterOrders('Received')">Received</button>
+            <button class="tab" onclick="filterOrders('Cancelled')">Cancelled</button>
+        </div>
+
+        <form id="orders-form" method="post">
+            <div class="bg-amber-50 rounded-lg shadow-md p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center">
+                        <input type="checkbox" id="selectAll" class="mr-2" onchange="toggleSelectAll(this)" />
+                        <label for="selectAll" class="text-gray-700 text-sm font-semibold">Select All</label>
+                    </div>
+                    <button type="submit" class="inline-block bg-red-600 text-white font-medium text-sm py-1.5 px-3 rounded hover:bg-red-700" id="action-selected-btn" disabled>Cancel Selected Orders</button>
+                </div>
+                <div class="space-y-4" id="orders-list">
+                    @foreach (var order in Model)
+                    {
+                        <div class="order-item flex items-center justify-between p-4 bg-white rounded-lg shadow-sm" data-status="@(order.IsCancelled ? "Cancelled" : order.Status)">
+                            <div class="flex items-center">
+                                <input type="checkbox" name="selectedOrders" value="@order.UserId|@order.BookId|@order.OrderDate.ToUniversalTime().ToString("o")" class="order-checkbox mr-4" @(order.IsCancelled || order.Status == "Received" || !order.IsCancellable ? "disabled" : "") />
+                                @if (!string.IsNullOrEmpty(order.Book.CoverImageUrl))
+                                {
+                                    <img src="@order.Book.CoverImageUrl" alt="@order.Book.Title" class="w-16 h-16 object-cover rounded mr-4" />
+                                }
+                                else
+                                {
+                                    <div class="w-16 h-16 bg-gray-200 flex items-center justify-center rounded mr-4">
+                                        <span class="text-sm">No Image</span>
+                                    </div>
+                                }
+                                <div>
+                                    <h3 class="text-base font-semibold text-amber-800">@order.Book.Title</h3>
+                                    <p class="text-gray-600 text-sm">by @order.Book.Author</p>
+                                    <p class="text-gray-600 text-sm">Ordered: @order.OrderDate.ToString("d MMM yyyy HH:mm")</p>
+                                    <p class="text-gray-600 text-sm">Quantity: @order.Quantity</p>
+                                    <p class="text-gray-600 text-sm">Total: $@order.TotalPrice</p>
+                                    <p class="text-gray-600 text-sm">User ID: @order.UserId</p>
+                                    <p class="text-gray-600 text-sm">Claim Code: @order.ClaimCode</p>
+                                    <p class="text-gray-600 text-sm">Status: @order.Status</p>
+                                    @if (order.IsCancelled)
+                                    {
+                                        <p class="text-red-600 text-sm">Cancelled on: @order.CancelledAt?.ToString("d MMM yyyy HH:mm")</p>
+                                    }
+                                    @if (order.IsFulfilled)
+                                    {
+                                        <p class="text-green-600 text-sm">Received on: @order.FulfilledAt?.ToString("d MMM yyyy HH:mm")</p>
+                                    }
+                                </div>
+                            </div>
+                            @if (order.IsCancelled || order.Status == "Received")
+                            {
+                                <form asp-action="DeleteOrder" method="post">
+                                    <input type="hidden" name="userId" value="@order.UserId" />
+                                    <input type="hidden" name="bookId" value="@order.BookId" />
+                                    <input type="hidden" name="orderDate" value="@order.OrderDate.ToUniversalTime().ToString("o")" />
+                                    <button type="submit" class="bg-red-600 text-white font-medium text-xs py-1 px-2 rounded hover:bg-red-700">Delete</button>
+                                </form>
+                            }
+                            else
+                            {
+                                <form asp-action="CancelOrder" method="post">
+                                    <input type="hidden" name="userId" value="@order.UserId" />
+                                    <input type="hidden" name="bookId" value="@order.BookId" />
+                                    <input type="hidden" name="orderDate" value="@order.OrderDate.ToUniversalTime().ToString("o")" />
+                                    <button type="submit" class="bg-red-600 text-white font-medium text-xs py-1 px-2 rounded hover:bg-red-700 @(order.IsCancelled || !order.IsCancellable ? "opacity-50 cursor-not-allowed" : "")" @(order.IsCancelled || !order.IsCancellable ? "disabled" : "")>Cancel Order</button>
+                                </form>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </form>
+    }
+
+    <div class="mt-4 text-center">
+        <a asp-controller="Cart" asp-action="Cart" class="inline-block bg-gray-500 text-white font-medium text-sm py-1.5 px-3 rounded hover:bg-gray-600">Back to Cart</a>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const selectAllCheckbox = document.getElementById('selectAll');
+        const actionSelectedBtn = document.getElementById('action-selected-btn');
+        const ordersForm = document.getElementById('orders-form');
+        let orderCheckboxes = document.querySelectorAll('.order-checkbox:not([disabled])');
+
+        // Function to filter orders by status
+        function filterOrders(status) {
+            // Update active tab
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Show/hide orders based on status
+            const orders = document.querySelectorAll('.order-item');
+            orders.forEach(order => {
+                if (order.getAttribute('data-status') === status) {
+                    order.classList.add('visible');
+                } else {
+                    order.classList.remove('visible');
+                }
+            });
+
+            // Update the list of selectable checkboxes based on visible orders
+            orderCheckboxes = document.querySelectorAll('.order-item.visible .order-checkbox:not([disabled])');
+
+            // Reset "Select All" checkbox
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = false;
+            orderCheckboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+
+            // Update form action and button text based on the active tab
+            if (status === 'Placed') {
+                ordersForm.setAttribute('action', '@Url.Action("CancelOrders", "Cart")');
+                actionSelectedBtn.textContent = 'Cancel Selected Orders';
+            } else {
+                ordersForm.setAttribute('action', '@Url.Action("DeleteOrders", "Cart")');
+                actionSelectedBtn.textContent = 'Delete Selected Orders';
+            }
+
+            // Update cancel/delete button state
+            actionSelectedBtn.disabled = true;
+        }
+
+        // Toggle "Select All" checkbox
+        function toggleSelectAll(checkbox) {
+            orderCheckboxes.forEach(cb => {
+                cb.checked = checkbox.checked;
+            });
+            actionSelectedBtn.disabled = !checkbox.checked;
+        }
+
+        // Update "Select All" checkbox state based on individual checkbox changes
+        orderCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                const allChecked = Array.from(orderCheckboxes).every(cb => cb.checked);
+                const anyChecked = Array.from(orderCheckboxes).some(cb => cb.checked);
+                selectAllCheckbox.checked = allChecked;
+                selectAllCheckbox.indeterminate = !allChecked && anyChecked;
+                actionSelectedBtn.disabled = !anyChecked;
+            });
+        });
+
+        // Initialize by showing "Placed" orders
+        document.querySelector('.tab[data-status="Placed"]').click();
+    </script>
+}

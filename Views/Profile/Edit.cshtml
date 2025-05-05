@@ -1,0 +1,64 @@
+﻿@model BookHive.Models.ProfileViewModel
+
+@{
+    ViewData["Title"] = "Edit Profile";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container mx-auto px-4 py-6">
+    <h2 class="text-2xl font-bold text-amber-900 mb-6 text-center">Edit Profile</h2>
+
+    <div class="bg-amber-50 rounded-lg shadow-md p-6 max-w-lg mx-auto">
+        <form asp-action="Edit" method="post" enctype="multipart/form-data" class="space-y-6">
+            <div>
+                <label asp-for="UserName" class="block text-sm font-semibold text-gray-700 mb-1">Username</label>
+                <input asp-for="UserName" class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500" required />
+                <span asp-validation-for="UserName" class="text-red-600 text-sm"></span>
+            </div>
+            <div>
+                <label asp-for="Email" class="block text-sm font-semibold text-gray-700 mb-1">Email</label>
+                <input asp-for="Email" class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500" required />
+                <span asp-validation-for="Email" class="text-red-600 text-sm"></span>
+            </div>
+            <div>
+                <label asp-for="FirstName" class="block text-sm font-semibold text-gray-700 mb-1">First Name</label>
+                <input asp-for="FirstName" class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500" />
+                <span asp-validation-for="FirstName" class="text-red-600 text-sm"></span>
+            </div>
+            <div>
+                <label asp-for="LastName" class="block text-sm font-semibold text-gray-700 mb-1">Last Name</label>
+                <input asp-for="LastName" class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500" />
+                <span asp-validation-for="LastName" class="text-red-600 text-sm"></span>
+            </div>
+            <div>
+                <label asp-for="ProfileImage" class="block text-sm font-semibold text-gray-700 mb-1">Profile Image</label>
+                <input asp-for="ProfileImage" type="file" accept="image/*" class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500" />
+                <span asp-validation-for="ProfileImage" class="text-red-600 text-sm"></span>
+                <p class="text-sm text-gray-600 mt-1">Supported formats: JPG, PNG. Max size: 5MB.</p>
+            </div>
+            <div class="mt-4">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Current Profile Image</label>
+                @if (!string.IsNullOrEmpty(Model.ProfileImageUrl))
+                {
+                    <div class="text-center">
+                        <img src="@Model.ProfileImageUrl" alt="Profile Image" class="w-32 h-32 object-cover rounded-full mx-auto" />
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center p-4 bg-gray-200 rounded-lg">
+                        <p class="text-gray-600">No profile image available.</p>
+                    </div>
+                }
+            </div>
+            <div class="flex justify-end gap-3">
+                <a asp-action="ViewProfile" class="inline-block bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-600">Cancel</a>
+                <button type="submit" class="inline-block bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-amber-700">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

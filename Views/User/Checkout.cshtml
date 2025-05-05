@@ -1,0 +1,85 @@
+﻿@model IEnumerable<(BookHive.Models.Cart CartItem, decimal DiscountedPrice, bool OnSale)>
+
+@{
+    ViewData["Title"] = "Checkout";
+}
+
+<div class="container mx-auto px-4 py-6">
+    <h2 class="text-2xl font-bold text-center text-amber-900 mb-6">Checkout</h2>
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="bg-red-100 text-red-700 p-2 rounded mb-4 text-center text-sm">
+            @TempData["ErrorMessage"]
+        </div>
+    }
+
+    <div class="bg-amber-50 rounded-lg shadow-md p-6 max-w-3xl mx-auto">
+        <!-- Cart Items Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            @foreach (var (cartItem, discountedPrice, onSale) in Model)
+            {
+                var book = cartItem.Book;
+                <div class="bg-white rounded-lg shadow-md p-4 flex flex-col relative">
+                    @if (onSale)
+                    {
+                        <span class="absolute top-2 right-2 bg-red-500 text-white text-xs font-semibold px-2 py-1 rounded">On Sale</span>
+                    }
+                    @if (!string.IsNullOrEmpty(book.CoverImageUrl))
+                    {
+                        <img src="@book.CoverImageUrl" alt="@book.Title" class="w-full h-36 object-cover rounded mb-2" />
+                    }
+                    else
+                    {
+                        <div class="w-full h-36 bg-gray-200 flex items-center justify-center rounded mb-2">
+                            <span class="text-sm">No Image</span>
+                        </div>
+                    }
+                    <h3 class="text-base font-semibold text-amber-800 mb-1">@book.Title</h3>
+                    <p class="text-gray-600 text-sm mb-1">by @book.Author</p>
+                    @if (discountedPrice < book.Price)
+                    {
+                        <p class="text-gray-600 text-sm mb-1">
+                            <span class="line-through">Price: $@book.Price</span>
+                            <span class="text-green-600 ml-2">Now: $@discountedPrice</span>
+                        </p>
+                    }
+                    else
+                    {
+                        <p class="text-gray-600 text-sm mb-1">Price: $@book.Price</p>
+                    }
+                    <p class="text-gray-600 text-sm mb-1">Quantity: @cartItem.Quantity</p>
+                    <p class="text-gray-600 text-sm mb-2">Total: $@(discountedPrice * cartItem.Quantity)</p>
+                </div>
+            }
+        </div>
+
+        <!-- Total Price and Discount -->
+        <div class="mt-6">
+            <p class="text-gray-700 text-sm">Total Items: @ViewBag.TotalItems</p>
+            <p class="text-gray-700 text-sm">Total Price: $@ViewBag.TotalPrice</p>
+            @if (ViewBag.DiscountAmount > 0)
+            {
+                <p class="text-gray-700 text-sm">Discount: $@ViewBag.DiscountAmount</p>
+            }
+            else
+            {
+                <p class="text-gray-700 text-sm">No Discounts Applied</p>
+            }
+            <p class="text-gray-700 text-sm font-semibold">Final Price: $@ViewBag.FinalPrice</p>
+        </div>
+
+        <!-- Note About Claim Code -->
+        <div class="mt-4 text-center text-gray-600 text-sm">
+            <p>After confirming your order, you will receive a claim code on the My Orders page. Present your membership ID and claim code at the store for in-store pickup.</p>
+        </div>
+
+        <!-- Confirm Order and Back to Cart Buttons -->
+        <form asp-controller="Cart" asp-action="CheckoutConfirmed" method="post" class="mt-4 text-center">
+            <button type="submit" class="inline-block bg-amber-600 text-white font-medium text-sm py-1.5 px-3 rounded hover:bg-amber-700">Confirm Order</button>
+        </form>
+        <div class="mt-4 text-center">
+            <a asp-controller="Cart" asp-action="Cart" class="inline-block bg-gray-500 text-white font-medium text-sm py-1.5 px-3 rounded hover:bg-gray-600">Back to Cart</a>
+        </div>
+    </div>
+</div>
