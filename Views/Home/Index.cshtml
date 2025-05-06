@@ -1,95 +1,105 @@
 ﻿@model BookHive.Models.HomeViewModel
 @{
     ViewData["Title"] = "Home";
+    Layout = "~/Views/Shared/_Layout.cshtml";
 }
-<!-- Define CSS variables for theme colors (could also be in a shared CSS or _Layout) -->
-<style>
-    :root {
-        --brand-color: #F59E0B; /* Amber 500 – primary brand color */
-        --brand-color-hover: #D97706; /* Amber 600 – darker hover state */
+
+<!-- Hero -->
+<section class="relative">
+    <img src="https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&w=1920&q=80" alt="Books hero" class="absolute inset-0 w-full h-full object-cover opacity-20">
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
+        <h1 class="text-4xl sm:text-5xl md:text-6xl font-merriweather font-bold text-[#4b2e83] mb-4">Discover Your Next Favourite Book</h1>
+        <p class="text-lg sm:text-xl text-slate-700 mb-8">Curated collections, exclusive discounts, and fast delivery—everything a reader needs.</p>
+        <a asp-controller="Books" asp-action="Index" class="inline-block bg-[#fbbf24] text-[#4b2e83] px-10 py-3 rounded-full font-medium hover:bg-[#f8d267] transition">Browse Catalogue</a>
+    </div>
+</section>
+
+<!-- On Sale -->
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <h2 class="text-2xl font-semibold text-[#4b2e83] mb-6">Limited‑Time Deals</h2>
+    @{
+        var onSaleBooks = Model.Books.Where(b => b.OnSaleFlag).ToList();
     }
-</style>
-
-<div class="bg-white dark:bg-gray-900">
-    @* Main page container *@
-    <!-- Hero Banner -->
-    <section class="hero bg-amber-100 text-gray-800 dark:text-gray-100
-                   py-16 px-6 text-center md:text-left md:flex md:items-center md:justify-between">
-        <div class="max-w-xl mx-auto md:mx-0">
-            <h1 class="text-4xl md:text-5xl font-bold mb-4">Welcome to <span class="text-amber-600">BookNook</span></h1>
-            <p class="text-lg md:text-xl mb-6">
-                Discover your next favorite book in our curated collection.
-            </p>
-            <a asp-controller="Books" asp-action="Index"
-               class="inline-block bg-[var(--brand-color)] hover:bg-[var(--brand-color-hover)]
-                      text-white font-semibold text-lg px-6 py-3 rounded shadow-lg
-                      transition transform hover:scale-105">
-                Browse Books
-            </a>
-        </div>
-        <!-- (Optional) Hero image can be placed on the right side on desktop -->
-        <div class="mt-8 md:mt-0 md:ml-8">
-            <img src="~/images/hero-reading.png" alt="Person reading books" class="mx-auto md:mx-0 max-w-xs md:max-w-sm lg:max-w-md drop-shadow-xl" />
-        </div>
-    </section>
-
-    <!-- On Sale Section (Carousel) -->
-    <section class="on-sale py-12 px-6">
-        <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6">On Sale 📚</h2>
-        <!-- Carousel container: horizontally scrollable list of books on sale -->
-        <div class="relative">
-            <!-- Slider track -->
-            <div class="flex space-x-4 overflow-x-auto scroll-smooth snap-x snap-mandatory
-                        pb-4 scrollbar-hide">
-                @foreach (var book in Model.OnSaleBooks)
+    @if (onSaleBooks.Any())
+    {
+        <div class="overflow-x-auto scrollbar-thin pb-4">
+            <div class="flex space-x-6">
+                @foreach (var item in onSaleBooks)
                 {
-                    <div class="snap-start flex-shrink-0 bg-white dark:bg-gray-800 rounded-lg shadow
-                                overflow-hidden w-56 sm:w-64 transition transform hover:-translate-y-1 hover:shadow-lg">
-                        <img src="@book.CoverImageUrl" alt="@book.Title cover" class="h-72 w-full object-cover" />
+                    var book = item.Book;
+                    <div class="flex-shrink-0 w-48 bg-white rounded-lg shadow hover:shadow-lg transition">
                         <div class="p-4">
-                            <h3 class="font-semibold text-gray-800 dark:text-gray-100 text-lg mb-2">@book.Title</h3>
-                            <p class="text-amber-600 font-bold">@book.Price.ToString("C") <span class="text-sm text-gray-500 line-through ml-2">@book.OriginalPrice.ToString("C")</span></p>
+                            <span class="inline-block text-xs text-white bg-red-600 px-2 py-0.5 rounded mb-2">SALE</span>
+                            @if (!string.IsNullOrEmpty(book.CoverImageUrl))
+                            {
+                                <a asp-controller="Books" asp-action="Details" asp-route-id="@book.Id">
+                                    <img src="@book.CoverImageUrl" alt="@book.Title" class="w-full h-52 object-cover rounded mb-3" />
+                                </a>
+                            }
+                            else
+                            {
+                                <div class="w-full h-52 bg-slate-200 flex items-center justify-center rounded mb-3"><span class="text-sm text-slate-500">No Image</span></div>
+                            }
+                            <h3 class="font-medium text-[#4b2e83] line-clamp-2 mb-1"><a asp-controller="Books" asp-action="Details" asp-route-id="@book.Id">@book.Title</a></h3>
+                            <p class="text-slate-600 text-sm mb-1">by @book.Author</p>
+                            @if (item.IsDiscountActive)
+                            {
+                                <p class="text-sm"><span class="line-through text-slate-400">$@book.Price</span><span class="text-[#4b2e83] ml-2 font-semibold">$@item.DiscountedPrice</span></p>
+                            }
+                            else
+                            {
+                                <p class="text-slate-600 text-sm">$@book.Price</p>
+                            }
                         </div>
                     </div>
                 }
             </div>
-            <!-- Optional: Carousel navigation arrows (could be enhanced with JavaScript) -->
-            <button class="hidden md:block absolute left-0 top-1/2 -translate-y-1/2 bg-gray-100/70 dark:bg-gray-700/70
-                           p-3 rounded-full shadow hover:bg-gray-100 dark:hover:bg-gray-600" type="button"
-                    aria-label="Scroll left" onclick="this.nextElementSibling.scrollBy({ left: -300, behavior: 'smooth' })">
-                &#8592;
-            </button>
-            <button class="hidden md:block absolute right-0 top-1/2 -translate-y-1/2 bg-gray-100/70 dark:bg-gray-700/70
-                           p-3 rounded-full shadow hover:bg-gray-100 dark:hover:bg-gray-600" type="button"
-                    aria-label="Scroll right" onclick="this.previousElementSibling.scrollBy({ left: 300, behavior: 'smooth' })">
-                &#8594;
-            </button>
         </div>
-    </section>
+    }
+    else
+    {
+        <p class="text-slate-600">No deals at the moment—check back soon!</p>
+    }
+</section>
 
-    <!-- Featured Books Grid -->
-    <section class="featured py-12 px-6 bg-gray-50 dark:bg-gray-800">
-        <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-8">Featured Books</h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            @foreach (var book in Model.FeaturedBooks)
-            {
-                <div class="bg-white dark:bg-gray-700 rounded-xl shadow transition transform
-                            hover:-translate-y-1 hover:shadow-lg overflow-hidden flex flex-col">
-                    <img src="@book.CoverImageUrl" alt="@book.Title cover" class="h-64 w-full object-cover" />
-                    <div class="p-5 flex flex-col flex-grow">
-                        <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1">@book.Title</h3>
-                        <p class="text-gray-600 dark:text-gray-300 mb-4 flex-grow">@book.Author</p>
-                        <div class="mt-auto flex items-center justify-between">
-                            <span class="text-xl font-bold text-amber-600">@book.Price.ToString("C")</span>
-                            <a asp-controller="Books" asp-action="Details" asp-route-id="@book.Id"
-                               class="text-sm font-medium text-white bg-[var(--brand-color)] hover:bg-[var(--brand-color-hover)]
-                                      px-4 py-2 rounded transition-colors">
-                                Details
-                            </a>
-                        </div>
-                    </div>
+<!-- Featured -->
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+    <h2 class="text-2xl font-semibold text-[#4b2e83] mb-6">Featured Picks</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+        @foreach (var item in Model.Books.OrderBy(b => Guid.NewGuid()).Take(8))
+        {
+            var book = item.Book;
+            <div class="bg-white rounded-lg shadow hover:shadow-lg transition">
+                @if (!string.IsNullOrEmpty(book.CoverImageUrl))
+                {
+                    <a asp-controller="Books" asp-action="Details" asp-route-id="@book.Id">
+                        <img src="@book.CoverImageUrl" alt="@book.Title" class="w-full h-60 object-cover rounded-t" />
+                    </a>
+                }
+                else
+                {
+                    <div class="w-full h-60 bg-slate-200 flex items-center justify-center rounded-t"><span class="text-sm text-slate-500">No Image</span></div>
+                }
+                <div class="p-4">
+                    <h3 class="font-medium text-[#4b2e83] mb-1 line-clamp-2"><a asp-controller="Books" asp-action="Details" asp-route-id="@book.Id">@book.Title</a></h3>
+                    <p class="text-slate-600 text-sm mb-2">by @book.Author</p>
+                    @if (item.IsDiscountActive)
+                    {
+                        <p class="text-sm mb-2"><span class="line-through text-slate-400">$@book.Price</span><span class="text-[#4b2e83] ml-2 font-semibold">$@item.DiscountedPrice</span></p>
+                    }
+                    else
+                    {
+                        <p class="text-slate-600 text-sm mb-2">$@book.Price</p>
+                    }
+                    <p class="text-xs text-slate-500">Added: @book.AddedDate.ToString("d MMM yy")</p>
                 </div>
-            }
-        </div>
-    </section>
-</div>
+            </div>
+        }
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        // Page-specific JS (if needed)
+    </script>
+}

@@ -1,12 +1,26 @@
 ﻿@{
     ViewData["Title"] = "Staff Creation Confirmation";
+    Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<h2>Staff Creation Confirmation</h2>
+<!-- Wrapper -------------------------------------------------------------->
+<div class="flex items-center justify-center min-h-[calc(100vh-200px)] bg-gradient-to-br from-[#4b2e83]/10 via-[#fbbf24]/10 to-white px-4">
 
-<p>
-    The staff account has been created successfully. An email has been sent to the staff member with a verification link and their temporary password.
-</p>
-<p>
-    They won't be able to log in until they verify their email.
-</p>
+    <!-- Card -------------------------------------------------------------->
+    <div class="bg-white/90 backdrop-blur border border-slate-200 rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
+
+        <h1 class="text-2xl font-merriweather text-[#4b2e83] mb-4">
+            Staff Account Created
+        </h1>
+
+        <p class="text-slate-700 mb-4">
+            The staff account has been created successfully.<br>
+            An email has been sent to the staff member with a verification link and their temporary password.
+        </p>
+
+        <p class="text-slate-600 text-sm">
+            They won’t be able to log in until they verify their email.
+        </p>
+
+    </div>
+</div>

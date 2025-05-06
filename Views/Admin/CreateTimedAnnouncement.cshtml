@@ -1,29 +1,32 @@
 ﻿@model BookHive.Models.TimedAnnouncement
-
 @{
     ViewData["Title"] = "Create Timed Announcement";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<div class="container mx-auto px-4 py-6">
-    <h2 class="text-2xl font-bold text-amber-900 mb-6 text-center">Create Timed Announcement</h2>
+<div class="max-w-4xl mx-auto px-4 py-12">
 
+    <h1 class="text-2xl font-merriweather text-[#4b2e83] text-center mb-8">
+        Create Timed Announcement
+    </h1>
+
+    <!-- flash messages -->
     @if (TempData["SuccessMessage"] != null)
     {
-        <div class="bg-green-100 text-green-700 p-4 rounded-lg mb-4 text-center">
+        <div class="bg-emerald-100 text-emerald-700 py-3 px-4 rounded-lg mb-6 text-center shadow">
             @TempData["SuccessMessage"]
         </div>
     }
 
     @if (TempData["ErrorMessage"] != null || ViewData.ModelState.ErrorCount > 0)
     {
-        <div class="bg-red-100 text-red-700 p-4 rounded-lg mb-4 text-center">
+        <div class="bg-rose-100 text-rose-700 py-3 px-4 rounded-lg mb-6 text-center shadow text-sm">
             @if (ViewData.ModelState.ErrorCount > 0)
             {
-                <ul>
-                    @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                <ul class="list-disc list-inside space-y-1 text-left inline-block">
+                    @foreach (var err in ViewData.ModelState.Values.SelectMany(v => v.Errors))
                     {
-                        <li>@error.ErrorMessage</li>
+                        <li>@err.ErrorMessage</li>
                     }
                 </ul>
             }
@@ -34,20 +37,39 @@
         </div>
     }
 
-    <form asp-action="CreateTimedAnnouncement" method="post" class="bg-amber-50 rounded-lg shadow-md p-6 mb-6 max-w-lg mx-auto">
-        <div class="space-y-4">
+    <!-- form card -->
+    <form asp-action="CreateTimedAnnouncement" method="post"
+          class="bg-white/90 backdrop-blur border border-slate-200 rounded-2xl shadow-lg p-8 max-w-lg mx-auto">
+
+        <div class="space-y-6">
+
+            <!-- message -->
             <div>
-                <label for="Message" class="block text-sm font-semibold text-gray-700 mb-1">Announcement Message</label>
-                <textarea id="Message" name="Message" class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500" rows="3" required></textarea>
+                <label for="Message" class="block text-sm font-medium text-slate-700 mb-1">
+                    Announcement Message
+                </label>
+                <textarea id="Message" name="Message" rows="3" required
+                          class="w-full p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fbbf24]"></textarea>
             </div>
+
+            <!-- expiration -->
             <div>
-                <label for="ExpiresAt" class="block text-sm font-semibold text-gray-700 mb-1">Expiration Time</label>
-                <input type="datetime-local" id="ExpiresAt" name="ExpiresAt" class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500" required />
-                <span class="text-xs text-gray-500">Must be in the future.</span>
+                <label for="ExpiresAt" class="block text-sm font-medium text-slate-700 mb-1">
+                    Expiration Time
+                </label>
+                <input type="datetime-local" id="ExpiresAt" name="ExpiresAt" required
+                       class="w-full p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fbbf24]">
+                <span class="text-xs text-slate-500">Must be in the future.</span>
             </div>
+
+            <!-- submit -->
             <div class="flex justify-end">
-                <button type="submit" class="inline-block bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-amber-700">Create Timed Announcement</button>
+                <button type="submit"
+                        class="bg-[#4b2e83] hover:bg-[#3c226a] text-white text-sm font-semibold py-2 px-6 rounded-lg shadow">
+                    Create Timed Announcement
+                </button>
             </div>
+
         </div>
     </form>
 </div>

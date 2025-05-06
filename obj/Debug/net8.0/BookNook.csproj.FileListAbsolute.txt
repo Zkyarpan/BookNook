@@ -137,3 +137,4 @@ E:\AD Application Development\Sem 2\BookNook\BookNook\obj\Debug\net8.0\refint\Bo
 E:\AD Application Development\Sem 2\BookNook\BookNook\obj\Debug\net8.0\BookNook.pdb
 E:\AD Application Development\Sem 2\BookNook\BookNook\obj\Debug\net8.0\BookNook.genruntimeconfig.cache
 E:\AD Application Development\Sem 2\BookNook\BookNook\obj\Debug\net8.0\ref\BookNook.dll
+E:\AD Application Development\Sem 2\BookNook\BookNook\obj\Debug\net8.0\BookNook.sourcelink.json

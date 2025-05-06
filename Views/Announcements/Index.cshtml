@@ -1,50 +1,82 @@
-﻿@model IEnumerable<BookHive.Models.TimedAnnouncement>
-
+﻿@model BookHive.Models.TimedAnnouncement
 @{
-    ViewData["Title"] = "Announcements";
+    ViewData["Title"] = "Edit Announcement";
+    Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<div class="container mx-auto px-4 py-6">
-    <h2 class="text-2xl font-bold text-center text-amber-900 mb-6">Announcements</h2>
+<div class="max-w-4xl mx-auto px-4 py-12">
 
+    <h1 class="text-2xl font-merriweather text-[#4b2e83] text-center mb-8">
+        Edit Announcement
+    </h1>
+
+    <!-- flash messages -->
     @if (TempData["SuccessMessage"] != null)
     {
-        <div class="bg-green-100 text-green-700 p-2 rounded mb-4 text-center text-sm">
+        <div class="bg-emerald-100 text-emerald-700 py-2 px-4 rounded mb-6 text-center text-sm shadow">
             @TempData["SuccessMessage"]
         </div>
     }
-
-    @if (User.IsInRole("Admin"))
+    @if (TempData["ErrorMessage"] != null)
     {
-        <div class="text-center mb-4">
-            <a asp-action="Create" class="inline-block bg-amber-600 text-white font-medium text-sm py-1.5 px-3 rounded hover:bg-amber-700">Create New Announcement</a>
+        <div class="bg-rose-100 text-rose-700 py-2 px-4 rounded mb-6 text-center text-sm shadow">
+            @TempData["ErrorMessage"]
         </div>
     }
 
-    @if (!Model.Any())
-    {
-        <p class="text-center text-gray-600 text-sm">No active announcements.</p>
-    }
-    else
-    {
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            @foreach (var announcement in Model)
-            {
-                <div class="bg-amber-50 rounded-lg shadow-md p-4 flex flex-col">
-                    <h3 class="text-base font-semibold text-amber-800 mb-2">@announcement.Title</h3>
-                    <p class="text-gray-600 text-sm mb-2 flex-grow">@announcement.Message</p>
-                    <p class="text-gray-500 text-xs mb-2">Created: @announcement.CreatedAt.ToString("d MMM yyyy HH:mm")</p>
-                    <p class="text-gray-500 text-xs mb-2">Starts: @announcement.StartDate.ToString("d MMM yyyy HH:mm")</p>
-                    <p class="text-gray-500 text-xs mb-2">Expires: @announcement.ExpiresAt.ToString("d MMM yyyy HH:mm")</p>
-                    @if (User.IsInRole("Admin"))
-                    {
-                        <div class="flex space-x-1">
-                            <a asp-action="Edit" asp-route-id="@announcement.Id" class="inline-block bg-amber-600 text-white font-medium text-xs py-1 px-2 rounded hover:bg-amber-700 text-center flex-1">Edit</a>
-                            <a asp-action="Delete" asp-route-id="@announcement.Id" class="inline-block bg-red-600 text-white font-medium text-xs py-1 px-2 rounded hover:bg-red-700 text-center flex-1">Delete</a>
-                        </div>
-                    }
-                </div>
-            }
-        </div>
-    }
+    <!-- form card -->
+    <div class="bg-white/90 backdrop-blur border border-slate-200 rounded-2xl shadow-lg p-8 max-w-lg mx-auto">
+
+        <form asp-action="Edit" method="post" class="space-y-6">
+            <input type="hidden" asp-for="Id" />
+
+            <!-- Title -->
+            <div>
+                <label asp-for="Title" class="block text-sm font-medium text-slate-700 mb-1">Title</label>
+                <input asp-for="Title"
+                       class="w-full p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fbbf24] text-sm" />
+                <span asp-validation-for="Title" class="text-rose-600 text-xs"></span>
+            </div>
+
+            <!-- Message -->
+            <div>
+                <label asp-for="Message" class="block text-sm font-medium text-slate-700 mb-1">Message</label>
+                <textarea asp-for="Message" rows="5"
+                          class="w-full p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fbbf24] text-sm"></textarea>
+                <span asp-validation-for="Message" class="text-rose-600 text-xs"></span>
+            </div>
+
+            <!-- Start -->
+            <div>
+                <label asp-for="StartDate" class="block text-sm font-medium text-slate-700 mb-1">Start Date (UTC)</label>
+                <input asp-for="StartDate" type="datetime-local"
+                       class="w-full p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fbbf24] text-sm" />
+                <span asp-validation-for="StartDate" class="text-rose-600 text-xs"></span>
+            </div>
+
+            <!-- Expires -->
+            <div>
+                <label asp-for="ExpiresAt" class="block text-sm font-medium text-slate-700 mb-1">Expires At (UTC)</label>
+                <input asp-for="ExpiresAt" type="datetime-local"
+                       class="w-full p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fbbf24] text-sm" />
+                <span asp-validation-for="ExpiresAt" class="text-rose-600 text-xs"></span>
+            </div>
+
+            <!-- buttons -->
+            <div class="text-center space-x-2">
+                <button type="submit"
+                        class="bg-[#4b2e83] hover:bg-[#3c226a] text-white text-sm font-medium py-2 px-6 rounded-lg shadow">
+                    Save
+                </button>
+                <a asp-action="Index"
+                   class="bg-slate-500 hover:bg-slate-600 text-white text-sm font-medium py-2 px-6 rounded-lg shadow">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
 </div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

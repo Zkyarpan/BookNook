@@ -8,10 +8,11 @@
 }
 
 <style>
+    /* container scroll box */
     .user-list {
         max-height: 500px;
         overflow-y: auto;
-        border: 1px solid #e5e7eb;
+        border: 1px solid #e2e8f0;
         border-radius: 8px;
         padding: 10px;
     }
@@ -20,13 +21,14 @@
         display: flex;
         align-items: center;
         padding: 10px;
-        border-bottom: 1px solid #e5e7eb;
+        border-bottom: 1px solid #e2e8f0;
     }
 
         .user-item:last-child {
             border-bottom: none;
         }
 
+        /* avatar */
         .user-item img {
             width: 40px;
             height: 40px;
@@ -35,82 +37,77 @@
             margin-right: 10px;
         }
 
-        .user-item .no-image {
-            width: 40px;
-            height: 40px;
-            background-color: #e5e7eb;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 10px;
-            font-size: 12px;
-            color: #4b5563;
-        }
-
-    .user-details {
-        flex-grow: 1;
-    }
-
-    .user-actions {
+    .no-image {
+        width: 40px;
+        height: 40px;
+        background: #e2e8f0;
+        border-radius: 50%;
         display: flex;
-        gap: 10px;
+        align-items: center;
+        justify-content: center;
+        margin-right: 10px;
+        font-size: 12px;
+        color: #475569;
     }
 
+    /* filter buttons */
     .filter-buttons {
         display: flex;
         gap: 10px;
         margin-bottom: 20px;
+        flex-wrap: wrap;
     }
 
     .filter-button {
         padding: 8px 16px;
-        background-color: #d97706;
+        background: #4b2e83;
         color: white;
         border-radius: 6px;
         font-weight: 500;
-        transition: background-color 0.3s;
+        transition: background .2s;
     }
 
         .filter-button:hover {
-            background-color: #b45309;
+            background: #3c226a;
         }
 
         .filter-button.active {
-            background-color: #b45309;
+            background: #3c226a;
         }
 </style>
 
-<div class="container mx-auto px-4 py-6">
-    <h2 class="text-2xl font-bold text-amber-900 mb-6 text-center">Admin Dashboard</h2>
+<div class="max-w-6xl mx-auto px-4 py-10">
+    <h1 class="text-2xl font-merriweather text-[#4b2e83] text-center mb-8">
+        Admin Dashboard
+    </h1>
 
+    <!-- flash messages -->
     @if (TempData["SuccessMessage"] != null)
     {
-        <div class="bg-green-100 text-green-700 p-4 rounded-lg mb-4 text-center">
+        <div class="bg-emerald-100 text-emerald-700 py-3 px-4 rounded-lg mb-6 text-center shadow">
             @TempData["SuccessMessage"]
         </div>
     }
-
     @if (TempData["ErrorMessage"] != null)
     {
-        <div class="bg-red-100 text-red-700 p-4 rounded-lg mb-4 text-center">
+        <div class="bg-rose-100 text-rose-700 py-3 px-4 rounded-lg mb-6 text-center shadow">
             @TempData["ErrorMessage"]
         </div>
     }
 
-    <!-- Manage Users Section -->
-    <h3 class="text-xl font-semibold text-amber-800 mb-4">Manage Users</h3>
+    <!-- Manage Users ------------------------------------------------------>
+    <h2 class="text-xl font-semibold text-[#4b2e83] mb-4">Manage Users</h2>
 
-    <!-- Filter Buttons -->
+    <!-- Filters -->
     <div class="filter-buttons">
-        <button class="filter-button active" onclick="filterUsers('all')">All Users</button>
+        <button class="filter-button active" onclick="filterUsers('all')">All Users</button>
         <button class="filter-button" onclick="filterUsers('Admin')">Admins</button>
         <button class="filter-button" onclick="filterUsers('Staff')">Staff</button>
         <button class="filter-button" onclick="filterUsers('Member')">Members</button>
     </div>
 
-    <!-- User List -->
-    <div class="user-list">
+    <!-- User list -->
+    <div class="user-list bg-white/90 backdrop-blur">
         @foreach (var user in Model)
         {
             var roles = await UserManager.GetRolesAsync(user);
@@ -122,18 +119,24 @@
                 }
                 else
                 {
-                    <div class="no-image">
-                        <span>No Image</span>
-                    </div>
+                    <div class="no-image"><span>Img</span></div>
                 }
-                <div class="user-details">
-                    <h4 class="text-base font-semibold text-amber-800">@user.UserName</h4>
-                    <p class="text-gray-600 text-sm">Email: @user.Email</p>
-                    <p class="text-gray-600 text-sm">Roles: @(roles.Any() ? string.Join(", ", roles) : "None")</p>
+
+                <div class="flex-grow">
+                    <h4 class="text-sm font-semibold text-[#4b2e83]">@user.UserName</h4>
+                    <p class="text-xs text-slate-600">Email: @user.Email</p>
+                    <p class="text-xs text-slate-600">Roles: @(roles.Any() ? string.Join(", ", roles) : "None")</p>
                 </div>
-                <div class="user-actions">
-                    <a asp-action="ViewProfile" asp-route-id="@user.Id" class="inline-block bg-amber-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-amber-700 text-sm">View Profile</a>
-                    <a asp-action="SendDeletionNotice" asp-route-id="@user.Id" class="inline-block bg-red-600 text-white font-semibold py-1 px-3 rounded-lg hover:bg-red-700 text-sm">Send Deletion Notice</a>
+
+                <div class="flex gap-2 shrink-0">
+                    <a asp-action="ViewProfile" asp-route-id="@user.Id"
+                       class="bg-[#4b2e83] hover:bg-[#3c226a] text-white text-xs font-semibold py-1 px-3 rounded-lg shadow">
+                        View
+                    </a>
+                    <a asp-action="SendDeletionNotice" asp-route-id="@user.Id"
+                       class="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold py-1 px-3 rounded-lg shadow">
+                        Notice
+                    </a>
                 </div>
             </div>
         }
@@ -142,26 +145,18 @@
 
 @section Scripts {
     <script>
-        function filterUsers(role) {
-            // Update button styles
-            document.querySelectorAll('.filter-button').forEach(button => {
-                button.classList.remove('active');
-            });
+        function filterUsers(role){
+            document.querySelectorAll('.filter-button').forEach(b=>b.classList.remove('active'));
             document.querySelector(`button[onclick="filterUsers('${role}')"]`).classList.add('active');
 
-            // Show/hide users based on role
-            const userItems = document.querySelectorAll('.user-item');
-            userItems.forEach(item => {
-                if (role === 'all') {
-                    item.style.display = 'flex';
-                } else {
-                    const roles = item.getAttribute('data-roles').split(' ');
-                    item.style.display = roles.includes(role) ? 'flex' : 'none';
+            document.querySelectorAll('.user-item').forEach(item=>{
+                if(role==='all'){ item.style.display='flex'; }
+                else{
+                    const roles=item.getAttribute('data-roles').split(' ');
+                    item.style.display=roles.includes(role)?'flex':'none';
                 }
             });
         }
-
-        // Initialize with all users visible
         filterUsers('all');
     </script>
 }

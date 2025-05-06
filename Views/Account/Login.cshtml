@@ -1,42 +1,67 @@
 ﻿@model BookHive.Models.LoginViewModel
-
 @{
     ViewData["Title"] = "Login";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<div class="flex items-center justify-center min-h-[calc(100vh-200px)]">
-    <div class="bg-amber-50 rounded-lg shadow-lg p-8 max-w-md w-full">
-        <h2 class="text-2xl font-bold text-amber-900 mb-6 text-center">Login to BookHive</h2>
+<!-- Page wrapper ------------------------------------------------------------>
+<section class="relative isolate min-h-[calc(100vh-200px)] flex items-center justify-center px-4">
+  
 
-        <form asp-action="Login" method="post">
-            <div asp-validation-summary="All" class="text-red-600 mb-4 text-center"></div>
+    <!-- Login card -->
+    <div class="w-full max-w-md bg-white/90 backdrop-blur-md border border-slate-200 rounded-2xl shadow-lg p-8">
+        <h1 class="text-3xl font-merriweather text-[#4b2e83] text-center mb-6 drop-shadow-sm">
+            Welcome Back
+        </h1>
 
-            <div class="form-group mb-4">
-                <label asp-for="Email" class="block text-gray-700 mb-2"></label>
-                <input asp-for="Email" class="form-control w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500" placeholder="Enter your email" />
-                <span asp-validation-for="Email" class="text-red-600 text-sm"></span>
+        <form asp-action="Login" method="post" class="space-y-5">
+
+            <!-- Email ------------------------------------------------------->
+            <div>
+                <label asp-for="Email" class="block text-sm font-medium text-slate-700 mb-1"></label>
+                <input asp-for="Email"
+                       type="email"
+                       class="w-full rounded-lg border border-slate-300 p-3 placeholder-slate-400 focus:ring-2 focus:ring-[#fbbf24] focus:border-[#fbbf24] outline-none"
+                       placeholder="you@example.com">
+                <span asp-validation-for="Email" class="text-red-600 text-xs"></span>
             </div>
 
-            <div class="form-group mb-4">
-                <label asp-for="Password" class="block text-gray-700 mb-2"></label>
-                <input asp-for="Password" class="form-control w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500" placeholder="Enter your password" />
-                <span asp-validation-for="Password" class="text-red-600 text-sm"></span>
+            <!-- Password ---------------------------------------------------->
+            <div>
+                <label asp-for="Password" class="block text-sm font-medium text-slate-700 mb-1"></label>
+                <input asp-for="Password"
+                       type="password"
+                       class="w-full rounded-lg border border-slate-300 p-3 placeholder-slate-400 focus:ring-2 focus:ring-[#fbbf24] focus:border-[#fbbf24] outline-none"
+                       placeholder="••••••••">
+                <span asp-validation-for="Password" class="text-red-600 text-xs"></span>
             </div>
 
-            <div class="form-group mb-4 flex items-center">
-                <input asp-for="RememberMe" class="h-4 w-4 text-amber-600 focus:ring-amber-500 border-gray-300 rounded" />
-                <label asp-for="RememberMe" class="ml-2 text-gray-700"></label>
+            <!-- Remember me ------------------------------------------------->
+            <div class="flex items-center">
+                <input asp-for="RememberMe"
+                       class="h-4 w-4 text-[#4b2e83] focus:ring-[#4b2e83] border-slate-300 rounded">
+                <label asp-for="RememberMe" class="ml-2 text-sm text-slate-700 select-none"></label>
             </div>
 
-            <button type="submit" class="w-full bg-amber-600 text-white font-semibold py-3 rounded-lg hover:bg-amber-700 transition duration-300">Login</button>
+            <!-- Submit ------------------------------------------------------>
+            <button type="submit"
+                    class="w-full bg-[#4b2e83] hover:bg-[#3c226a] text-white font-semibold py-3 rounded-lg transition">
+                Sign In
+            </button>
 
-            <div class="mt-4 text-center">
-                <a href="/Account/Register" class="text-amber-600 hover:underline">Don't have an account? Register here</a>
+            <!-- Links ------------------------------------------------------->
+         
+            <div class="text-center text-sm">
+                <span class="text-slate-600">New here?</span>
+                <a asp-action="Register"
+                   asp-controller="Account"
+                   class="text-[#4b2e83] font-medium hover:underline">
+                    Create an account
+                </a>
             </div>
         </form>
     </div>
-</div>
+</section>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
