@@ -1,12 +1,13 @@
-﻿using BookHive.Models;
+﻿using System;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
+using BookNook.Data;      // ← updated
+using BookNook.Models;    // ← updated
 
-namespace BookHive.Data
+namespace BookNook.Data    // ← updated
 {
     public static class SeedData
     {
@@ -17,22 +18,18 @@ namespace BookHive.Data
             var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
             var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-            // Seed Roles
-            string[] roleNames = { "Admin", "Staff", "User" };
-            foreach (var roleName in roleNames)
-            {
-                if (!await roleManager.RoleExistsAsync(roleName))
-                {
-                    await roleManager.CreateAsync(new IdentityRole(roleName));
-                }
-            }
+            /* ----------  roles ---------- */
+            string[] roles = { "Admin", "Staff", "User" };
+            foreach (var role in roles)
+                if (!await roleManager.RoleExistsAsync(role))
+                    await roleManager.CreateAsync(new IdentityRole(role));
 
-            // Seed Admin User (admin@bookhive.com)
-            var adminEmail = "admin@bookhive.com";
-            var adminUser = await userManager.FindByEmailAsync(adminEmail);
-            if (adminUser == null)
+            /* ----------  default admin ---------- */
+            var adminEmail = "admin@booknook.com";
+            var admin = await userManager.FindByEmailAsync(adminEmail);
+            if (admin == null)
             {
-                adminUser = new ApplicationUser
+                admin = new ApplicationUser
                 {
                     UserName = adminEmail,
                     Email = adminEmail,
@@ -40,40 +37,28 @@ namespace BookHive.Data
                     FirstName = "Admin",
                     LastName = "User"
                 };
-                var result = await userManager.CreateAsync(adminUser, "Admin@123");
-                if (result.Succeeded)
-                {
-                    await userManager.AddToRoleAsync(adminUser, "Admin");
-                }
-                else
-                {
-                    throw new Exception($"Failed to create admin user: {string.Join(", ", result.Errors.Select(e => e.Description))}");
-                }
+                var res = await userManager.CreateAsync(admin, "Admin@123");
+                if (res.Succeeded) await userManager.AddToRoleAsync(admin, "Admin");
+                else throw new Exception($"Cannot create admin: {string.Join(", ", res.Errors.Select(e => e.Description))}");
             }
 
-            // Seed New Admin User (newadmin@example.com)
-            var newAdminEmail = "newadmin@example.com";
-            var newAdminUser = await userManager.FindByEmailAsync(newAdminEmail);
-            if (newAdminUser == null)
+            /* ----------  second admin ---------- */
+            var secondEmail = "newadmin@booknook.com";
+            var second = await userManager.FindByEmailAsync(secondEmail);
+            if (second == null)
             {
-                newAdminUser = new ApplicationUser
+                second = new ApplicationUser
                 {
-                    UserName = newAdminEmail,
-                    Email = newAdminEmail,
+                    UserName = secondEmail,
+                    Email = secondEmail,
                     EmailConfirmed = true
                 };
-                var result = await userManager.CreateAsync(newAdminUser, "NewAdminPassword123!");
-                if (result.Succeeded)
-                {
-                    await userManager.AddToRoleAsync(newAdminUser, "Admin");
-                }
-                else
-                {
-                    throw new Exception($"Failed to create new admin user: {string.Join(", ", result.Errors.Select(e => e.Description))}");
-                }
+                var res = await userManager.CreateAsync(second, "NewAdminPassword123!");
+                if (res.Succeeded) await userManager.AddToRoleAsync(second, "Admin");
+                else throw new Exception($"Cannot create 2nd admin: {string.Join(", ", res.Errors.Select(e => e.Description))}");
             }
 
-            // Seed Books
+            /* ----------  seed books (if none) ---------- */
             if (!context.Books.Any())
             {
                 context.Books.AddRange(
@@ -82,7 +67,7 @@ namespace BookHive.Data
                         Title = "To Kill a Mockingbird",
                         Author = "Harper Lee",
                         Description = "A gripping tale of racial injustice and the loss of innocence in a small Southern town.",
-                        CoverImageUrl = "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+                        CoverImageUrl = "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?q=80&w=1974&auto=format&fit=crop",
                         AddedDate = DateTime.UtcNow.AddDays(-10),
                         Price = 10.99m,
                         Quantity = 100,
@@ -101,7 +86,7 @@ namespace BookHive.Data
                         Title = "1984",
                         Author = "George Orwell",
                         Description = "A dystopian novel about totalitarian surveillance and control.",
-                        CoverImageUrl = "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+                        CoverImageUrl = "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?q=80&w=1974&auto=format&fit=crop",
                         AddedDate = DateTime.UtcNow.AddDays(-5),
                         Price = 12.99m,
                         Quantity = 80,
@@ -112,15 +97,14 @@ namespace BookHive.Data
                         Language = "English",
                         Publisher = "Secker & Warburg",
                         IsPhysicalLibraryAccess = false,
-                        IsBestseller = true,
-                        IsAwardWinner = false
+                        IsBestseller = true
                     },
                     new Book
                     {
                         Title = "Pride and Prejudice",
                         Author = "Jane Austen",
                         Description = "A romantic novel about the Bennet sisters and their marriage prospects.",
-                        CoverImageUrl = "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+                        CoverImageUrl = "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?q=80&w=1974&auto=format&fit=crop",
                         AddedDate = DateTime.UtcNow.AddDays(-2),
                         Price = 9.99m,
                         Quantity = 120,
@@ -130,9 +114,7 @@ namespace BookHive.Data
                         ISBN = "978-0141439518",
                         Language = "English",
                         Publisher = "T. Egerton",
-                        IsPhysicalLibraryAccess = true,
-                        IsBestseller = false,
-                        IsAwardWinner = false
+                        IsPhysicalLibraryAccess = true
                     }
                 );
                 await context.SaveChangesAsync();

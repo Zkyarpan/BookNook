@@ -1,16 +1,19 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using BookHive.Data;
-using BookHive.Models;
-using Microsoft.EntityFrameworkCore;
-using System.IO;
-using System.Threading.Tasks;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using BookNook.Data;
+using BookNook.Models;
+using System;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 using BookHive.Hubs;
 
-namespace BookHive.Controllers
+namespace BookNook.Controllers
 {
     public class BooksController : Controller
     {
@@ -34,7 +37,6 @@ namespace BookHive.Controllers
             _hubContext = hubContext ?? throw new ArgumentNullException(nameof(hubContext));
         }
 
-        // GET: Books/Index
         public async Task<IActionResult> Index(
             int page = 1,
             int pageSize = 12,
@@ -55,167 +57,102 @@ namespace BookHive.Controllers
         {
             var query = _context.Books.AsQueryable();
 
-            // Search by title, ISBN, or description
             if (!string.IsNullOrEmpty(search))
             {
-                search = search.ToLower();
+                var s = search.ToLower();
                 query = query.Where(b =>
-                    (b.Title != null && b.Title.ToLower().Contains(search)) ||
-                    (b.ISBN != null && b.ISBN.ToLower().Contains(search)) ||
-                    (b.Description != null && b.Description.ToLower().Contains(search)));
+                    (b.Title != null && b.Title.ToLower().Contains(s)) ||
+                    (b.ISBN != null && b.ISBN.ToLower().Contains(s)) ||
+                    (b.Description != null && b.Description.ToLower().Contains(s)));
             }
 
-            // Filter by author
             if (!string.IsNullOrEmpty(author))
-            {
                 query = query.Where(b => b.Author != null && b.Author.ToLower().Contains(author.ToLower()));
-            }
 
-            // Filter by genre
             if (!string.IsNullOrEmpty(genre))
-            {
                 query = query.Where(b => b.Genre != null && b.Genre.ToLower() == genre.ToLower());
-            }
 
-            // Filter by availability (stock)
             if (availability == "available")
-            {
                 query = query.Where(b => b.Quantity > 0);
-            }
             else if (availability == "unavailable")
-            {
                 query = query.Where(b => b.Quantity <= 0);
-            }
 
-            // Filter by physical library access
             if (physicalLibraryAccess.HasValue)
-            {
-                query = query.Where(b => b.IsPhysicalLibraryAccess == physicalLibraryAccess.Value);
-            }
+                query = query.Where(b => b.IsPhysicalLibraryAccess == physicalLibraryAccess);
 
-            // Filter by price range
-            if (minPrice.HasValue)
-            {
-                query = query.Where(b => b.Price >= minPrice.Value);
-            }
-            if (maxPrice.HasValue)
-            {
-                query = query.Where(b => b.Price <= maxPrice.Value);
-            }
+            if (minPrice.HasValue) query = query.Where(b => b.Price >= minPrice);
+            if (maxPrice.HasValue) query = query.Where(b => b.Price <= maxPrice);
 
-            // Filter by ratings
             if (minRating.HasValue)
-            {
-                query = query.Where(b => b.Reviews.Any() ? b.Reviews.Where(r => r.ParentReviewId == null).Average(r => r.Rating) >= minRating.Value : false);
-            }
+                query = query.Where(b => b.Reviews.Any()
+                                         ? b.Reviews.Where(r => r.ParentReviewId == null).Average(r => r.Rating) >= minRating
+                                         : false);
 
-            // Filter by language
             if (!string.IsNullOrEmpty(language))
-            {
                 query = query.Where(b => b.Language != null && b.Language.ToLower() == language.ToLower());
-            }
 
-            // Filter by format
             if (!string.IsNullOrEmpty(format))
-            {
                 query = query.Where(b => b.Format != null && b.Format.ToLower() == format.ToLower());
-            }
 
-            // Filter by publisher
             if (!string.IsNullOrEmpty(publisher))
-            {
                 query = query.Where(b => b.Publisher != null && b.Publisher.ToLower().Contains(publisher.ToLower()));
-            }
 
-            // Filter by ISBN (already handled in search)
-
-            // Category tabs
             switch (category.ToLower())
             {
-                case "bestsellers":
-                    query = query.Where(b => b.IsBestseller);
-                    break;
-                case "awardwinners":
-                    query = query.Where(b => b.IsAwardWinner);
-                    break;
-                case "newreleases":
-                    // Books published in the past 3 months
-                    var threeMonthsAgo = DateTime.UtcNow.AddMonths(-3);
-                    query = query.Where(b => b.PublicationDate >= threeMonthsAgo);
-                    break;
-                case "newarrivals":
-                    // Books listed in the past month
-                    var oneMonthAgo = DateTime.UtcNow.AddMonths(-1);
-                    query = query.Where(b => b.AddedDate >= oneMonthAgo);
-                    break;
-                case "comingsoon":
-                    // Books with a future publication date
-                    query = query.Where(b => b.PublicationDate > DateTime.UtcNow);
-                    break;
+                case "bestsellers": query = query.Where(b => b.IsBestseller); break;
+                case "awardwinners": query = query.Where(b => b.IsAwardWinner); break;
+                case "newreleases": query = query.Where(b => b.PublicationDate >= DateTime.UtcNow.AddMonths(-3)); break;
+                case "newarrivals": query = query.Where(b => b.AddedDate >= DateTime.UtcNow.AddMonths(-1)); break;
+                case "comingsoon": query = query.Where(b => b.PublicationDate > DateTime.UtcNow); break;
                 case "deals":
-                    // Books with active discounts
-                    query = query.Where(b => _context.TimedDiscounts.Any(td => td.BookId == b.Id && td.StartDate <= DateTime.UtcNow && td.ExpiresAt >= DateTime.UtcNow));
-                    break;
-                case "all":
-                default:
-                    // No additional filtering for "All Books"
+                    query = query.Where(b => _context.TimedDiscounts.Any(td =>
+                                   td.BookId == b.Id &&
+                                   td.StartDate <= DateTime.UtcNow &&
+                                   td.ExpiresAt >= DateTime.UtcNow));
                     break;
             }
 
-            // Sorting
             switch (sort.ToLower())
             {
-                case "author":
-                    query = query.OrderBy(b => b.Author ?? string.Empty);
-                    break;
-                case "publicationdate":
-                    query = query.OrderByDescending(b => b.PublicationDate);
-                    break;
-                case "price":
-                    query = query.OrderBy(b => b.Price);
-                    break;
+                case "author": query = query.OrderBy(b => b.Author ?? string.Empty); break;
+                case "publicationdate": query = query.OrderByDescending(b => b.PublicationDate); break;
+                case "price": query = query.OrderBy(b => b.Price); break;
                 case "popularity":
-                    // Sort by most sold (based on Orders)
-                    query = query
-                        .GroupJoin(_context.Orders.Where(o => !o.IsCancelled),
-                            b => b.Id,
-                            o => o.BookId,
-                            (b, orders) => new { Book = b, TotalSold = orders.Sum(o => o.Quantity) })
-                        .OrderByDescending(x => x.TotalSold)
-                        .Select(x => x.Book);
+                    query = query.GroupJoin(
+                                _context.Orders.Where(o => !o.IsCancelled),
+                                b => b.Id,
+                                o => o.BookId,
+                                (b, orders) => new { b, sold = orders.Sum(o => o.Quantity) })
+                             .OrderByDescending(x => x.sold)
+                             .Select(x => x.b);
                     break;
-                case "title":
                 default:
-                    query = query.OrderBy(b => b.Title ?? string.Empty);
-                    break;
+                    query = query.OrderBy(b => b.Title ?? string.Empty); break;
             }
 
-            // Pagination
             var totalBooks = await query.CountAsync();
-            var books = await query
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
+            var books = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
 
-            // Apply discounts
-            var bookIds = books.Select(b => b.Id).ToList();
-            var timedDiscounts = await _context.TimedDiscounts
-                .Where(td => bookIds.Contains(td.BookId))
-                .ToListAsync();
+            var discounts = await _context.TimedDiscounts
+                               .Where(td => books.Select(b => b.Id).Contains(td.BookId))
+                               .ToListAsync();
 
-            var booksWithDiscounts = books.Select(book =>
+            var list = books.Select(b =>
             {
-                var discount = timedDiscounts.FirstOrDefault(td => td.BookId == book.Id && td.StartDate <= DateTime.UtcNow && td.ExpiresAt >= DateTime.UtcNow);
+                var d = discounts.FirstOrDefault(td =>
+                          td.BookId == b.Id &&
+                          td.StartDate <= DateTime.UtcNow &&
+                          td.ExpiresAt >= DateTime.UtcNow);
+
                 return new BookWithDiscountViewModel
                 {
-                    Book = book,
-                    OnSaleFlag = discount?.OnSaleFlag ?? false,
-                    IsDiscountActive = discount != null,
-                    DiscountedPrice = discount != null ? book.Price * (1 - discount.DiscountPercentage) : book.Price
+                    Book = b,
+                    OnSaleFlag = d?.OnSaleFlag ?? false,
+                    IsDiscountActive = d != null,
+                    DiscountedPrice = d != null ? b.Price * (1 - d.DiscountPercentage) : b.Price
                 };
             }).ToList();
 
-            // Set ViewBag properties for the view
             ViewBag.TotalPages = (int)Math.Ceiling((double)totalBooks / pageSize);
             ViewBag.CurrentPage = page;
             ViewBag.Search = search;
@@ -233,50 +170,35 @@ namespace BookHive.Controllers
             ViewBag.Publisher = publisher;
             ViewBag.ISBN = isbn;
 
-            // Handle cart items for authenticated users
             if (User.Identity.IsAuthenticated)
             {
-                var user = await _userManager.GetUserAsync(User);
-                if (user != null)
-                {
-                    ViewBag.HasCartItems = await _context.Carts.AnyAsync(c => c.UserId == user.Id);
-                }
-                else
-                {
-                    ViewBag.HasCartItems = false;
-                }
+                var u = await _userManager.GetUserAsync(User);
+                ViewBag.HasCartItems = u != null && await _context.Carts.AnyAsync(c => c.UserId == u.Id);
             }
-            else
-            {
-                ViewBag.HasCartItems = false;
-            }
+            else ViewBag.HasCartItems = false;
 
-            return View(booksWithDiscounts);
+            return View(list);
         }
 
-        // GET: Books/Details/{id}
-        [AllowAnonymous] // Allow unauthenticated users to view book details
+        [AllowAnonymous]
         public async Task<IActionResult> Details(int id)
         {
             var book = await _context.Books
-                .Include(b => b.Reviews)
-                .ThenInclude(r => r.User)
+                .Include(b => b.Reviews).ThenInclude(r => r.User)
                 .FirstOrDefaultAsync(b => b.Id == id);
-
-            if (book == null)
-            {
-                return NotFound();
-            }
+            if (book == null) return NotFound();
 
             var discount = await _context.TimedDiscounts
-                .FirstOrDefaultAsync(td => td.BookId == id && td.StartDate <= DateTime.UtcNow && td.ExpiresAt >= DateTime.UtcNow);
+                .FirstOrDefaultAsync(td =>
+                    td.BookId == id &&
+                    td.StartDate <= DateTime.UtcNow &&
+                    td.ExpiresAt >= DateTime.UtcNow);
 
-            // Load reviews and their replies (only top-level reviews)
             var reviews = await _context.Reviews
                 .Where(r => r.BookId == id && r.ParentReviewId == null)
                 .Include(r => r.User)
                 .Include(r => r.Replies)
-                .ThenInclude(reply => reply.User)
+                .ThenInclude(rp => rp.User)
                 .ToListAsync();
 
             var model = new BookWithDiscountViewModel
@@ -288,68 +210,51 @@ namespace BookHive.Controllers
                 Reviews = reviews
             };
 
-            // Fetch recommendations
-            // Most rated books (top 3 by average rating)
-            var mostRatedBooks = await _context.Books
+            var mostRated = await _context.Books
                 .Select(b => new
                 {
-                    Book = b,
-                    AverageRating = b.Reviews.Any(r => r.ParentReviewId == null) ? b.Reviews.Where(r => r.ParentReviewId == null).Average(r => r.Rating) : 0
+                    b,
+                    rating = b.Reviews.Any(r => r.ParentReviewId == null)
+                                ? b.Reviews.Where(r => r.ParentReviewId == null).Average(r => r.Rating) : 0
                 })
-                .Where(b => b.Book.Id != book.Id) // Exclude the current book
-                .OrderByDescending(b => b.AverageRating)
+                .Where(x => x.b.Id != id)
+                .OrderByDescending(x => x.rating)
                 .Take(3)
-                .Select(b => new BookWithDiscountViewModel
+                .Select(x => new BookWithDiscountViewModel
                 {
-                    Book = b.Book,
+                    Book = x.b,
                     OnSaleFlag = false,
                     IsDiscountActive = false,
-                    DiscountedPrice = b.Book.Price
-                })
-                .ToListAsync();
+                    DiscountedPrice = x.b.Price
+                }).ToListAsync();
 
-            // Most ordered books (top 3 by total quantity ordered)
-            var mostOrderedBooks = await _context.Orders
+            var mostOrdered = await _context.Orders
                 .Where(o => !o.IsCancelled)
                 .GroupBy(o => o.BookId)
-                .Select(g => new
-                {
-                    BookId = g.Key,
-                    TotalQuantity = g.Sum(o => o.Quantity)
-                })
-                .OrderByDescending(g => g.TotalQuantity)
+                .Select(g => new { g.Key, qty = g.Sum(o => o.Quantity) })
+                .OrderByDescending(g => g.qty)
                 .Take(3)
                 .Join(_context.Books,
-                    g => g.BookId,
-                    b => b.Id,
-                    (g, b) => new BookWithDiscountViewModel
-                    {
-                        Book = b,
-                        OnSaleFlag = false,
-                        IsDiscountActive = false,
-                        DiscountedPrice = b.Price
-                    })
-                .Where(b => b.Book.Id != book.Id) // Exclude the current book
+                      g => g.Key,
+                      b => b.Id,
+                      (g, b) => new BookWithDiscountViewModel
+                      {
+                          Book = b,
+                          OnSaleFlag = false,
+                          IsDiscountActive = false,
+                          DiscountedPrice = b.Price
+                      })
+                .Where(b => b.Book.Id != id)
                 .ToListAsync();
 
-            ViewBag.MostRatedBooks = mostRatedBooks;
-            ViewBag.MostOrderedBooks = mostOrderedBooks;
+            ViewBag.MostRatedBooks = mostRated;
+            ViewBag.MostOrderedBooks = mostOrdered;
 
             if (User.Identity.IsAuthenticated)
             {
-                var user = await _userManager.GetUserAsync(User);
-                if (user != null)
-                {
-                    var hasPurchased = await _context.Orders
-                        .AnyAsync(o => o.UserId == user.Id && o.BookId == id && !o.IsCancelled);
-                    ViewBag.HasPurchased = hasPurchased;
-                    ViewBag.HasCartItems = await _context.Carts.AnyAsync(c => c.UserId == user.Id);
-                }
-                else
-                {
-                    ViewBag.HasPurchased = false;
-                    ViewBag.HasCartItems = false;
-                }
+                var u = await _userManager.GetUserAsync(User);
+                ViewBag.HasPurchased = u != null && await _context.Orders.AnyAsync(o => o.UserId == u.Id && o.BookId == id && !o.IsCancelled);
+                ViewBag.HasCartItems = u != null && await _context.Carts.AnyAsync(c => c.UserId == u.Id);
             }
             else
             {
@@ -360,372 +265,221 @@ namespace BookHive.Controllers
             return View(model);
         }
 
-        // GET: Books/GetBookStock?bookId={id}
         [AllowAnonymous]
         public async Task<IActionResult> GetBookStock(int bookId)
         {
-            var book = await _context.Books.FindAsync(bookId);
-            if (book == null)
-            {
-                return Json(new { stock = 0 });
-            }
-
-            return Json(new { stock = book.Quantity });
+            var b = await _context.Books.FindAsync(bookId);
+            return Json(new { stock = b?.Quantity ?? 0 });
         }
 
-        // POST: Books/AddToCart/{id}
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize] // Require authentication
+        [Authorize]
         public async Task<IActionResult> AddToCart(int id, int quantity = 1)
         {
-            _logger.LogInformation("Attempting to add book {BookId} to cart for current user", id);
+            _logger.LogInformation("Adding book {Id} to cart", id);
+            var u = await _userManager.GetUserAsync(User);
+            if (u == null) return Json(new { success = false, message = "User not found." });
 
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                _logger.LogWarning("User not found in AddToCart");
-                return Json(new { success = false, message = "User not found. Please log in." });
-            }
+            var b = await _context.Books.FindAsync(id);
+            if (b == null) return Json(new { success = false, message = "Book not found." });
+            if (!b.IsAvailable) return Json(new { success = false, message = "Out of stock." });
+            if (quantity < 1) quantity = 1;
 
-            var book = await _context.Books.FindAsync(id);
-            if (book == null)
+            var entry = await _context.Carts.FirstOrDefaultAsync(c => c.UserId == u.Id && c.BookId == id);
+            if (entry != null)
             {
-                _logger.LogWarning("Book not found in AddToCart for id {BookId}", id);
-                return Json(new { success = false, message = "Book not found." });
-            }
-
-            if (!book.IsAvailable)
-            {
-                return Json(new { success = false, message = "This book is currently out of stock." });
-            }
-
-            if (quantity < 1)
-            {
-                quantity = 1;
-            }
-
-            var existingEntry = await _context.Carts
-                .FirstOrDefaultAsync(c => c.UserId == user.Id && c.BookId == id);
-            if (existingEntry != null)
-            {
-                var newQuantity = existingEntry.Quantity + quantity;
-                if (newQuantity > book.Quantity)
-                {
-                    return Json(new { success = false, message = $"Only {book.Quantity} copies of '{book.Title}' are available." });
-                }
-                existingEntry.Quantity = newQuantity;
+                var newQty = entry.Quantity + quantity;
+                if (newQty > b.Quantity) return Json(new { success = false, message = $"Only {b.Quantity} copies available." });
+                entry.Quantity = newQty;
             }
             else
             {
-                if (quantity > book.Quantity)
-                {
-                    return Json(new { success = false, message = $"Only {book.Quantity} copies of '{book.Title}' are available." });
-                }
-                var cartEntry = new Cart
-                {
-                    UserId = user.Id,
-                    BookId = id,
-                    Quantity = quantity
-                };
-                _context.Carts.Add(cartEntry);
+                if (quantity > b.Quantity) return Json(new { success = false, message = $"Only {b.Quantity} copies available." });
+                _context.Carts.Add(new Cart { UserId = u.Id, BookId = id, Quantity = quantity });
             }
 
             await _context.SaveChangesAsync();
 
-            // Broadcast updated cart count to all clients
-            int cartCount = await _context.Carts
-                .Where(c => c.UserId == user.Id)
-                .Select(c => c.BookId)
-                .Distinct()
-                .CountAsync();
-            await _hubContext.Clients.All.SendAsync("UpdateCartCount", cartCount);
+            var count = await _context.Carts.Where(c => c.UserId == u.Id).Select(c => c.BookId).Distinct().CountAsync();
+            await _hubContext.Clients.All.SendAsync("UpdateCartCount", count);
 
-            return Json(new { success = true, message = "Cart was added successfully!" });
+            return Json(new { success = true, message = "Added to cart." });
         }
 
-        // POST: Books/ToggleWishlist/{id}
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize] // Require authentication
+        [Authorize]
         public async Task<IActionResult> ToggleWishlist(int id)
         {
             try
             {
-                _logger.LogInformation("Attempting to toggle whitelist status for book {BookId} for current user", id);
+                var u = await _userManager.GetUserAsync(User);
+                if (u == null) return Json(new { success = false, message = "User not found." });
 
-                var user = await _userManager.GetUserAsync(User);
-                if (user == null)
+                var b = await _context.Books.FindAsync(id);
+                if (b == null) return Json(new { success = false, message = "Book not found." });
+
+                var w = await _context.Whitelists.FirstOrDefaultAsync(x => x.UserId == u.Id && x.BookId == id);
+                if (w != null)
                 {
-                    _logger.LogWarning("User not found in ToggleWishlist");
-                    return Json(new { success = false, message = "User not found." });
-                }
-
-                var book = await _context.Books.FindAsync(id);
-                if (book == null)
-                {
-                    return Json(new { success = false, message = "Book not found." });
-                }
-
-                var existingEntry = await _context.Whitelists
-                    .FirstOrDefaultAsync(w => w.UserId == user.Id && w.BookId == id);
-
-                if (existingEntry != null)
-                {
-                    // Remove from whitelist
-                    _context.Whitelists.Remove(existingEntry);
+                    _context.Whitelists.Remove(w);
                     await _context.SaveChangesAsync();
-                    return Json(new { success = true, inWishlist = false, message = "Book removed from your whitelist." });
+                    return Json(new { success = true, inWishlist = false, message = "Removed from whitelist." });
                 }
-                else
-                {
-                    // Add to whitelist
-                    var whitelistEntry = new Whitelist
-                    {
-                        UserId = user.Id,
-                        BookId = id
-                    };
-                    _context.Whitelists.Add(whitelistEntry);
-                    await _context.SaveChangesAsync();
-                    return Json(new { success = true, inWishlist = true, message = "Book added to your whitelist." });
-                }
+                _context.Whitelists.Add(new Whitelist { UserId = u.Id, BookId = id });
+                await _context.SaveChangesAsync();
+                return Json(new { success = true, inWishlist = true, message = "Added to whitelist." });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error toggling whitelist for book {BookId}", id);
-                return Json(new { success = false, message = "Server error: " + ex.Message });
+                _logger.LogError(ex, "Toggle wishlist error");
+                return Json(new { success = false, message = "Server error." });
             }
         }
 
-        // GET: Books/IsInWishlist?bookId={id}
-        [Authorize] // Require authentication
+        [Authorize]
         public async Task<IActionResult> IsInWishlist(int bookId)
         {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                return Json(new { inWishlist = false });
-            }
-
-            var inWishlist = await _context.Whitelists
-                .AnyAsync(w => w.UserId == user.Id && w.BookId == bookId);
-
-            return Json(new { inWishlist = inWishlist });
+            var u = await _userManager.GetUserAsync(User);
+            if (u == null) return Json(new { inWishlist = false });
+            var flag = await _context.Whitelists.AnyAsync(w => w.UserId == u.Id && w.BookId == bookId);
+            return Json(new { inWishlist = flag });
         }
 
-        // GET: Books/Create
         [Authorize(Roles = "Admin")]
         [HttpGet]
-        public IActionResult Create()
-        {
-            return View(new BookViewModel());
-        }
+        public IActionResult Create() => View(new BookViewModel());
 
-        // POST: Books/Create
         [Authorize(Roles = "Admin")]
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(BookViewModel model)
+        public async Task<IActionResult> Create(BookViewModel m)
         {
             try
             {
-                var book = new Book
+                var b = new Book
                 {
-                    Title = model.Title ?? string.Empty,
-                    Author = model.Author ?? string.Empty,
-                    Description = model.Description ?? string.Empty,
+                    Title = m.Title ?? "",
+                    Author = m.Author ?? "",
+                    Description = m.Description ?? "",
                     AddedDate = DateTime.UtcNow,
-                    Price = model.Price,
-                    Quantity = model.Quantity
+                    Price = m.Price,
+                    Quantity = m.Quantity
                 };
 
-                if (model.CoverImage != null && model.CoverImage.Length > 0)
+                if (m.CoverImage != null && m.CoverImage.Length > 0)
                 {
-                    var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "images/book-covers");
-                    if (!Directory.Exists(uploadsFolder))
-                    {
-                        try
-                        {
-                            Directory.CreateDirectory(uploadsFolder);
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, "Failed to create directory {UploadsFolder}", uploadsFolder);
-                            TempData["ErrorMessage"] = "Failed to create upload directory: " + ex.Message;
-                            return View(model);
-                        }
-                    }
+                    var folder = Path.Combine(_webHostEnvironment.WebRootPath, "images/book-covers");
+                    if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
 
-                    var uniqueFileName = Guid.NewGuid().ToString() + "_" + Path.GetFileName(model.CoverImage.FileName);
-                    var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                    try
-                    {
-                        using (var fileStream = new FileStream(filePath, FileMode.Create))
-                        {
-                            await model.CoverImage.CopyToAsync(fileStream);
-                        }
-                        book.CoverImageUrl = "/images/book-covers/" + uniqueFileName;
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Failed to save cover image for book {BookTitle}", model.Title);
-                        TempData["ErrorMessage"] = "Failed to save cover image: " + ex.Message;
-                        return View(model);
-                    }
+                    var name = $"{Guid.NewGuid()}_{Path.GetFileName(m.CoverImage.FileName)}";
+                    var path = Path.Combine(folder, name);
+                    await using var fs = new FileStream(path, FileMode.Create);
+                    await m.CoverImage.CopyToAsync(fs);
+                    b.CoverImageUrl = "/images/book-covers/" + name;
                 }
 
-                _context.Add(book);
+                _context.Add(b);
                 await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = $"Book '{book.Title}' created successfully.";
+                TempData["SuccessMessage"] = $"Book '{b.Title}' created.";
                 return RedirectToAction(nameof(Index));
-            }
-            catch (DbUpdateException ex)
-            {
-                _logger.LogError(ex, "Database error while creating book {BookTitle}", model.Title);
-                TempData["ErrorMessage"] = "A database error occurred while creating the book: " + (ex.InnerException?.Message ?? ex.Message);
-                return View(model);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating book {BookTitle}", model.Title);
-                TempData["ErrorMessage"] = "An unexpected error occurred while creating the book: " + ex.Message;
-                return View(model);
+                _logger.LogError(ex, "Create book error");
+                TempData["ErrorMessage"] = "Create failed.";
+                return View(m);
             }
         }
 
-        // GET: Books/Edit/{id}
         [Authorize(Roles = "Admin")]
         [HttpGet]
         public async Task<IActionResult> Edit(int? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            if (id == null) return NotFound();
+            var b = await _context.Books.FindAsync(id);
+            if (b == null) return NotFound();
 
-            var book = await _context.Books.FindAsync(id);
-            if (book == null)
+            var vm = new BookViewModel
             {
-                return NotFound();
-            }
-
-            var model = new BookViewModel
-            {
-                Id = book.Id,
-                Title = book.Title,
-                Author = book.Author,
-                Description = book.Description,
-                CoverImageUrl = book.CoverImageUrl,
-                Price = book.Price,
-                Quantity = book.Quantity
+                Id = b.Id,
+                Title = b.Title,
+                Author = b.Author,
+                Description = b.Description,
+                CoverImageUrl = b.CoverImageUrl,
+                Price = b.Price,
+                Quantity = b.Quantity
             };
-
-            return View(model);
+            return View(vm);
         }
 
-        // POST: Books/Edit/{id}
         [Authorize(Roles = "Admin")]
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, BookViewModel model)
+        public async Task<IActionResult> Edit(int id, BookViewModel m)
         {
-            if (id != model.Id)
-            {
-                return NotFound();
-            }
-
-            if (!ModelState.IsValid)
-            {
-                TempData["ErrorMessage"] = "Please correct the errors in the form.";
-                return View(model);
-            }
+            if (id != m.Id) return NotFound();
+            if (!ModelState.IsValid) return View(m);
 
             try
             {
-                var book = await _context.Books.FindAsync(id);
-                if (book == null)
+                var b = await _context.Books.FindAsync(id);
+                if (b == null) return NotFound();
+
+                var old = b.CoverImageUrl;
+                b.Title = m.Title ?? b.Title;
+                b.Author = m.Author ?? b.Author;
+                b.Description = m.Description ?? b.Description;
+                b.Price = m.Price;
+                b.Quantity = m.Quantity;
+
+                if (m.CoverImage != null && m.CoverImage.Length > 0)
                 {
-                    return NotFound();
-                }
+                    var folder = Path.Combine(_webHostEnvironment.WebRootPath, "images/book-covers");
+                    if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
 
-                var oldImagePath = book.CoverImageUrl;
+                    var name = $"{Guid.NewGuid()}_{Path.GetFileName(m.CoverImage.FileName)}";
+                    var path = Path.Combine(folder, name);
+                    await using var fs = new FileStream(path, FileMode.Create);
+                    await m.CoverImage.CopyToAsync(fs);
+                    b.CoverImageUrl = "/images/book-covers/" + name;
 
-                book.Title = model.Title ?? book.Title;
-                book.Author = model.Author ?? book.Author;
-                book.Description = model.Description ?? book.Description;
-                book.Price = model.Price;
-                book.Quantity = model.Quantity;
-
-                if (model.CoverImage != null && model.CoverImage.Length > 0)
-                {
-                    var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "images/book-covers");
-                    if (!Directory.Exists(uploadsFolder))
+                    if (!string.IsNullOrEmpty(old))
                     {
-                        Directory.CreateDirectory(uploadsFolder);
-                    }
-
-                    var uniqueFileName = Guid.NewGuid().ToString() + "_" + Path.GetFileName(model.CoverImage.FileName);
-                    var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                    using (var fileStream = new FileStream(filePath, FileMode.Create))
-                    {
-                        await model.CoverImage.CopyToAsync(fileStream);
-                    }
-
-                    book.CoverImageUrl = "/images/book-covers/" + uniqueFileName;
-
-                    if (!string.IsNullOrEmpty(oldImagePath))
-                    {
-                        var oldFilePath = Path.Combine(_webHostEnvironment.WebRootPath, oldImagePath.TrimStart('/'));
-                        if (System.IO.File.Exists(oldFilePath))
-                        {
-                            System.IO.File.Delete(oldFilePath);
-                        }
+                        var oldPath = Path.Combine(_webHostEnvironment.WebRootPath, old.TrimStart('/'));
+                        if (System.IO.File.Exists(oldPath)) System.IO.File.Delete(oldPath);
                     }
                 }
 
-                _context.Update(book);
+                _context.Update(b);
                 await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = $"Book '{book.Title}' updated successfully.";
+                TempData["SuccessMessage"] = $"Book '{b.Title}' updated.";
                 return RedirectToAction(nameof(Index));
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!BookExists(model.Id))
-                {
-                    return NotFound();
-                }
+                if (!_context.Books.Any(e => e.Id == m.Id)) return NotFound();
                 throw;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error editing book {BookId}", id);
-                TempData["ErrorMessage"] = "An error occurred while editing the book: " + ex.Message;
-                return View(model);
+                _logger.LogError(ex, "Edit book error");
+                TempData["ErrorMessage"] = "Edit failed.";
+                return View(m);
             }
         }
 
-        // GET: Books/Delete/{id}
         [Authorize(Roles = "Admin")]
         [HttpGet]
         public async Task<IActionResult> Delete(int? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var book = await _context.Books.FindAsync(id);
-            if (book == null)
-            {
-                return NotFound();
-            }
-
-            return View(book);
+            if (id == null) return NotFound();
+            var b = await _context.Books.FindAsync(id);
+            if (b == null) return NotFound();
+            return View(b);
         }
 
-        // POST: Books/DeleteConfirmed/{id}
         [Authorize(Roles = "Admin")]
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
@@ -733,119 +487,83 @@ namespace BookHive.Controllers
         {
             try
             {
-                var book = await _context.Books.FindAsync(id);
-                if (book != null)
+                var b = await _context.Books.FindAsync(id);
+                if (b != null)
                 {
-                    if (!string.IsNullOrEmpty(book.CoverImageUrl))
+                    if (!string.IsNullOrEmpty(b.CoverImageUrl))
                     {
-                        var filePath = Path.Combine(_webHostEnvironment.WebRootPath, book.CoverImageUrl.TrimStart('/'));
-                        if (System.IO.File.Exists(filePath))
-                        {
-                            System.IO.File.Delete(filePath);
-                        }
+                        var p = Path.Combine(_webHostEnvironment.WebRootPath, b.CoverImageUrl.TrimStart('/'));
+                        if (System.IO.File.Exists(p)) System.IO.File.Delete(p);
                     }
-
-                    _context.Books.Remove(book);
+                    _context.Books.Remove(b);
                     await _context.SaveChangesAsync();
-                    TempData["SuccessMessage"] = $"Book '{book.Title}' deleted successfully.";
-                }
-                else
-                {
-                    TempData["ErrorMessage"] = "Book not found.";
+                    TempData["SuccessMessage"] = $"Book '{b.Title}' deleted.";
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error deleting book {BookId}", id);
-                TempData["ErrorMessage"] = "An error occurred while deleting the book: " + ex.Message;
+                _logger.LogError(ex, "Delete book error");
+                TempData["ErrorMessage"] = "Delete failed.";
             }
-
             return RedirectToAction(nameof(Index));
         }
 
-        // GET: Books/ManageDiscounts/{id}
         [Authorize(Roles = "Admin")]
         [HttpGet]
         public async Task<IActionResult> ManageDiscounts(int id)
         {
-            var book = await _context.Books.FindAsync(id);
-            if (book == null)
-            {
-                return NotFound();
-            }
+            var b = await _context.Books.FindAsync(id);
+            if (b == null) return NotFound();
 
-            var discount = await _context.TimedDiscounts
-                .FirstOrDefaultAsync(td => td.BookId == id);
-
-            var model = new TimedDiscountViewModel
+            var d = await _context.TimedDiscounts.FirstOrDefaultAsync(td => td.BookId == id);
+            var vm = new TimedDiscountViewModel
             {
-                BookId = book.Id,
-                BookTitle = book.Title,
-                DiscountPercentage = discount?.DiscountPercentage * 100 ?? 0,
-                StartDate = discount?.StartDate ?? DateTime.UtcNow,
-                ExpiresAt = discount?.ExpiresAt ?? DateTime.UtcNow.AddDays(7),
-                OnSaleFlag = discount?.OnSaleFlag ?? false
+                BookId = b.Id,
+                BookTitle = b.Title,
+                DiscountPercentage = d?.DiscountPercentage * 100 ?? 0,
+                StartDate = d?.StartDate ?? DateTime.UtcNow,
+                ExpiresAt = d?.ExpiresAt ?? DateTime.UtcNow.AddDays(7),
+                OnSaleFlag = d?.OnSaleFlag ?? false
             };
-
-            return View(model);
+            return View(vm);
         }
 
-        // POST: Books/ManageDiscounts
         [Authorize(Roles = "Admin")]
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ManageDiscounts(TimedDiscountViewModel model)
+        public async Task<IActionResult> ManageDiscounts(TimedDiscountViewModel m)
         {
-            if (!ModelState.IsValid)
-            {
-                return View(model);
-            }
+            if (!ModelState.IsValid) return View(m);
+            var b = await _context.Books.FindAsync(m.BookId);
+            if (b == null) return NotFound();
 
-            var book = await _context.Books.FindAsync(model.BookId);
-            if (book == null)
-            {
-                return NotFound();
-            }
+            var d = await _context.TimedDiscounts.FirstOrDefaultAsync(td => td.BookId == m.BookId);
 
-            var existingDiscount = await _context.TimedDiscounts
-                .FirstOrDefaultAsync(td => td.BookId == model.BookId);
-
-            if (model.DiscountPercentage > 0)
+            if (m.DiscountPercentage > 0)
             {
-                if (existingDiscount == null)
-                {
-                    var discount = new TimedDiscount
+                if (d == null)
+                    _context.TimedDiscounts.Add(new TimedDiscount
                     {
-                        BookId = model.BookId,
-                        DiscountPercentage = model.DiscountPercentage / 100,
-                        StartDate = model.StartDate,
-                        ExpiresAt = model.ExpiresAt,
-                        OnSaleFlag = model.OnSaleFlag
-                    };
-                    _context.TimedDiscounts.Add(discount);
-                }
+                        BookId = m.BookId,
+                        DiscountPercentage = m.DiscountPercentage / 100,
+                        StartDate = m.StartDate,
+                        ExpiresAt = m.ExpiresAt,
+                        OnSaleFlag = m.OnSaleFlag
+                    });
                 else
                 {
-                    existingDiscount.DiscountPercentage = model.DiscountPercentage / 100;
-                    existingDiscount.StartDate = model.StartDate;
-                    existingDiscount.ExpiresAt = model.ExpiresAt;
-                    existingDiscount.OnSaleFlag = model.OnSaleFlag;
-                    _context.TimedDiscounts.Update(existingDiscount);
+                    d.DiscountPercentage = m.DiscountPercentage / 100;
+                    d.StartDate = m.StartDate;
+                    d.ExpiresAt = m.ExpiresAt;
+                    d.OnSaleFlag = m.OnSaleFlag;
+                    _context.TimedDiscounts.Update(d);
                 }
             }
-            else if (existingDiscount != null)
-            {
-                _context.TimedDiscounts.Remove(existingDiscount);
-            }
+            else if (d != null) _context.TimedDiscounts.Remove(d);
 
             await _context.SaveChangesAsync();
-            TempData["SuccessMessage"] = "Discount updated successfully.";
-            return RedirectToAction("Details", new { id = model.BookId });
-        }
-
-        private bool BookExists(int id)
-        {
-            return _context.Books.Any(e => e.Id == id);
+            TempData["SuccessMessage"] = "Discount updated.";
+            return RedirectToAction("Details", new { id = m.BookId });
         }
     }
 }

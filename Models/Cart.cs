@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace BookHive.Models
+namespace BookNook.Models
 {
     public class Cart
     {
@@ -14,10 +14,9 @@ namespace BookHive.Models
 
         [Required]
         [Range(1, int.MaxValue, ErrorMessage = "Quantity must be at least 1.")]
-        public int Quantity { get; set; } = 1; // Default to 1
+        public int Quantity { get; set; } = 1;
 
         public ApplicationUser User { get; set; } = null!;
-
         public Book Book { get; set; } = null!;
     }
 }

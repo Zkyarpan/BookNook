@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Http;
 
-namespace BookHive.Models
+namespace BookNook.Models
 {
     public class EditProfileViewModel
     {
@@ -11,9 +11,9 @@ namespace BookHive.Models
         [Required(ErrorMessage = "Last Name is required.")]
         public string LastName { get; set; } = string.Empty;
 
-        public string? ProfilePictureUrl { get; set; } // Existing profile picture path
+        public string? ProfilePictureUrl { get; set; }
 
         [Display(Name = "Profile Picture")]
-        public IFormFile? ProfilePicture { get; set; } // File upload for the profile picture
+        public IFormFile? ProfilePicture { get; set; }
     }
 }

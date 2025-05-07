@@ -1,15 +1,16 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using BookHive.Models;
+﻿using System;
 using System.Threading.Tasks;
-using BookHive.Data;
+using BookHive.Hubs;
+using BookNook.Data;
+using BookNook.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.SignalR;
-using BookHive.Hubs;
 
-namespace BookHive.Controllers
+namespace BookNook.Controllers
 {
     [Authorize(Roles = "Staff")]
     public class StaffController : Controller
@@ -31,21 +32,13 @@ namespace BookHive.Controllers
             _hubContext = hubContext ?? throw new ArgumentNullException(nameof(hubContext));
         }
 
-        // GET: Staff/FulfillOrder
-        public IActionResult FulfillOrder()
-        {
-            return View(new FulfillOrderViewModel());
-        }
+        public IActionResult FulfillOrder() => View(new FulfillOrderViewModel());
 
-        // POST: Staff/FulfillOrder
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> FulfillOrder(FulfillOrderViewModel model)
         {
-            if (!ModelState.IsValid)
-            {
-                return View(model);
-            }
+            if (!ModelState.IsValid) return View(model);
 
             var order = await _context.Orders
                 .Include(o => o.Book)
@@ -70,20 +63,17 @@ namespace BookHive.Controllers
                 return View(model);
             }
 
-            // Verify user ID
             if (order.UserId != model.UserId)
             {
                 ModelState.AddModelError("UserId", "The user ID does not match the order.");
                 return View(model);
             }
 
-            // Display order details for confirmation
             model.Order = order;
             model.IsConfirmationStep = true;
             return View(model);
         }
 
-        // POST: Staff/ConfirmFulfillOrder
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ConfirmFulfillOrder(string claimCode, string userId)
@@ -117,15 +107,13 @@ namespace BookHive.Controllers
                 return RedirectToAction(nameof(FulfillOrder));
             }
 
-            // Mark the order as fulfilled and set status to "Received"
             order.IsFulfilled = true;
-            order.FulfilledAt = DateTime.UtcNow; // The setter will ensure UTC
+            order.FulfilledAt = DateTime.UtcNow;
             order.Status = "Received";
 
             await _context.SaveChangesAsync();
 
-            // Broadcast the message to all clients
-            string message = $"Order for '{order.Book.Title}' by {order.User.FirstName} {order.User.LastName} has been successfully fulfilled!";
+            var message = $"Order for '{order.Book.Title}' by {order.User.FirstName} {order.User.LastName} has been successfully fulfilled!";
             await _hubContext.Clients.All.SendAsync("ReceiveOrderNotification", message);
 
             TempData["SuccessMessage"] = "Order fulfilled successfully.";
@@ -135,8 +123,8 @@ namespace BookHive.Controllers
 
     public class FulfillOrderViewModel
     {
-        public string ClaimCode { get; set; }
-        public string UserId { get; set; }
+        public string ClaimCode { get; set; } = string.Empty;
+        public string UserId { get; set; } = string.Empty;
         public Order? Order { get; set; }
         public bool IsConfirmationStep { get; set; }
     }

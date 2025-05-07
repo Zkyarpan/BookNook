@@ -1,15 +1,13 @@
 ﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using BookHive.Models;
+using BookNook.Models;                
 
-namespace BookHive.Data
+namespace BookNook.Data                
 {
     public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-            : base(options)
-        {
-        }
+            : base(options) { }
 
         public DbSet<Book> Books { get; set; }
         public DbSet<Cart> Carts { get; set; }
@@ -24,74 +22,55 @@ namespace BookHive.Data
         {
             base.OnModelCreating(builder);
 
-            // Configure Cart with composite key
+            // composite keys
             builder.Entity<Cart>()
-                .HasKey(c => new { c.UserId, c.BookId });
+                   .HasKey(c => new { c.UserId, c.BookId });
 
-            // Configure Whitelist with composite key
             builder.Entity<Whitelist>()
-                .HasKey(w => new { w.UserId, w.BookId });
+                   .HasKey(w => new { w.UserId, w.BookId });
 
-            // Configure Order with composite key
             builder.Entity<Order>()
-                .HasKey(o => new { o.UserId, o.BookId, o.OrderDate });
+                   .HasKey(o => new { o.UserId, o.BookId, o.OrderDate });
 
-            // Configure Review with single Id as primary key
+            builder.Entity<BookLoan>()
+                   .HasKey(bl => new { bl.UserId, bl.BookId, bl.LoanDate });
+
+            // reviews (self‑reference & relationships)
             builder.Entity<Review>()
-                .HasKey(r => r.Id);
+                   .HasKey(r => r.Id);
 
-            // Configure self-referencing relationship for Review
             builder.Entity<Review>()
-                .HasOne(r => r.ParentReview)
-                .WithMany(r => r.Replies)
-                .HasForeignKey(r => r.ParentReviewId)
-                .OnDelete(DeleteBehavior.Restrict);
+                   .HasOne(r => r.ParentReview)
+                   .WithMany(r => r.Replies)
+                   .HasForeignKey(r => r.ParentReviewId)
+                   .OnDelete(DeleteBehavior.Restrict);
 
-            // Configure Book-Review relationship
             builder.Entity<Review>()
-                .HasOne(r => r.Book)
-                .WithMany(b => b.Reviews)
-                .HasForeignKey(r => r.BookId)
-                .OnDelete(DeleteBehavior.Cascade);
+                   .HasOne(r => r.Book)
+                   .WithMany(b => b.Reviews)
+                   .HasForeignKey(r => r.BookId)
+                   .OnDelete(DeleteBehavior.Cascade);
 
-            // Configure Review-User relationship
             builder.Entity<Review>()
-                .HasOne(r => r.User)
-                .WithMany()
-                .HasForeignKey(r => r.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
+                   .HasOne(r => r.User)
+                   .WithMany()
+                   .HasForeignKey(r => r.UserId)
+                   .OnDelete(DeleteBehavior.Cascade);
 
-            // Configure TimedDiscount
+            // timed discount
             builder.Entity<TimedDiscount>()
-                .HasOne(td => td.Book)
-                .WithMany()
-                .HasForeignKey(td => td.BookId)
-                .OnDelete(DeleteBehavior.Cascade);
+                   .HasOne(td => td.Book)
+                   .WithMany()
+                   .HasForeignKey(td => td.BookId)
+                   .OnDelete(DeleteBehavior.Cascade);
 
-            // Configure BookLoan with composite key
-            builder.Entity<BookLoan>()
-                .HasKey(bl => new { bl.UserId, bl.BookId, bl.LoanDate });
-
-            // Configure BookLoan relationships
-            builder.Entity<BookLoan>()
-                .HasOne(bl => bl.User)
-                .WithMany()
-                .HasForeignKey(bl => bl.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            builder.Entity<BookLoan>()
-                .HasOne(bl => bl.Book)
-                .WithMany()
-                .HasForeignKey(bl => bl.BookId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            // Configure TimedAnnouncement
+            // announcement key
             builder.Entity<TimedAnnouncement>()
-                .HasKey(ta => ta.Id);
+                   .HasKey(ta => ta.Id);
 
-            // Ignore the Roles property on ApplicationUser
+            // ignore Roles list on ApplicationUser
             builder.Entity<ApplicationUser>()
-                .Ignore(u => u.Roles);
+                   .Ignore(u => u.Roles);
         }
     }
 }

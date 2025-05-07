@@ -1,13 +1,14 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System;
+using System.Threading.Tasks;
+using BookNook.Data;
+using BookNook.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using BookHive.Data;
-using BookHive.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Microsoft.AspNetCore.Identity;
-using System.Threading.Tasks;
 
-namespace BookHive.Controllers
+namespace BookNook.Controllers
 {
     [Authorize]
     public class ReviewsController : Controller
@@ -26,119 +27,71 @@ namespace BookHive.Controllers
             _userManager = userManager ?? throw new ArgumentNullException(nameof(userManager));
         }
 
-        // GET: Reviews/Create/{bookId}
         [Authorize(Roles = "User,Member")]
         public async Task<IActionResult> Create(int bookId)
         {
             var book = await _context.Books.FindAsync(bookId);
-            if (book == null)
-            {
-                return NotFound();
-            }
+            if (book == null) return NotFound();
 
             var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                return NotFound("User not found.");
-            }
+            if (user == null) return NotFound("User not found.");
 
-            // Check if user has purchased the book
-            var hasPurchased = await _context.Orders
-                .AnyAsync(o => o.UserId == user.Id && o.BookId == bookId && !o.IsCancelled);
+            var hasPurchased = await _context.Orders.AnyAsync(o => o.UserId == user.Id && o.BookId == bookId && !o.IsCancelled);
             if (!hasPurchased)
             {
                 TempData["ErrorMessage"] = "You can only review books you have purchased.";
                 return RedirectToAction("Details", "Books", new { id = bookId });
             }
 
-            // Check if user has already reviewed the book (top-level review)
-            var existingReview = await _context.Reviews
-                .AnyAsync(r => r.UserId == user.Id && r.BookId == bookId && r.ParentReviewId == null);
-            if (existingReview)
+            var reviewed = await _context.Reviews.AnyAsync(r => r.UserId == user.Id && r.BookId == bookId && r.ParentReviewId == null);
+            if (reviewed)
             {
                 TempData["ErrorMessage"] = "You have already reviewed this book.";
                 return RedirectToAction("Details", "Books", new { id = bookId });
             }
 
-            var model = new Review
-            {
-                BookId = bookId
-            };
-            return View(model);
+            return View(new Review { BookId = bookId });
         }
 
-        // POST: Reviews/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "User,Member")]
         public async Task<IActionResult> Create([Bind("BookId,Rating,Comment")] Review review)
         {
             var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                return Json(new { success = false, message = "User not found." });
-            }
+            if (user == null) return Json(new { success = false, message = "User not found." });
 
-            // Validate input
             if (review.Rating < 1 || review.Rating > 5)
-            {
-                // For AJAX requests, return JSON instead of a view
-                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
-                {
-                    return Json(new { success = false, message = "Rating must be between 1 and 5." });
-                }
-                TempData["ErrorMessage"] = "Rating must be between 1 and 5.";
-                return View(review);
-            }
+                return Request.Headers["X-Requested-With"] == "XMLHttpRequest"
+                    ? Json(new { success = false, message = "Rating must be between 1 and 5." })
+                    : BadRequest();
 
             if (string.IsNullOrWhiteSpace(review.Comment))
-            {
-                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
-                {
-                    return Json(new { success = false, message = "Comment is required." });
-                }
-                TempData["ErrorMessage"] = "Comment is required.";
-                return View(review);
-            }
+                return Request.Headers["X-Requested-With"] == "XMLHttpRequest"
+                    ? Json(new { success = false, message = "Comment is required." })
+                    : BadRequest();
 
             var book = await _context.Books.FindAsync(review.BookId);
             if (book == null)
-            {
-                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
-                {
-                    return Json(new { success = false, message = "Book not found." });
-                }
-                return NotFound();
-            }
+                return Request.Headers["X-Requested-With"] == "XMLHttpRequest"
+                    ? Json(new { success = false, message = "Book not found." })
+                    : NotFound();
 
-            var hasPurchased = await _context.Orders
-                .AnyAsync(o => o.UserId == user.Id && o.BookId == review.BookId && !o.IsCancelled);
-            if (!hasPurchased)
-            {
-                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
-                {
-                    return Json(new { success = false, message = "You can only review books you have purchased." });
-                }
-                TempData["ErrorMessage"] = "You can only review books you have purchased.";
-                return RedirectToAction("Details", "Books", new { id = review.BookId });
-            }
+            var purchased = await _context.Orders.AnyAsync(o => o.UserId == user.Id && o.BookId == review.BookId && !o.IsCancelled);
+            if (!purchased)
+                return Request.Headers["X-Requested-With"] == "XMLHttpRequest"
+                    ? Json(new { success = false, message = "You can only review books you have purchased." })
+                    : Unauthorized();
 
-            // Check if user has already reviewed the book (top-level review)
-            var existingReview = await _context.Reviews
-                .AnyAsync(r => r.UserId == user.Id && r.BookId == review.BookId && r.ParentReviewId == null);
-            if (existingReview)
-            {
-                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
-                {
-                    return Json(new { success = false, message = "You have already reviewed this book." });
-                }
-                TempData["ErrorMessage"] = "You have already reviewed this book.";
-                return RedirectToAction("Details", "Books", new { id = review.BookId });
-            }
+            var exists = await _context.Reviews.AnyAsync(r => r.UserId == user.Id && r.BookId == review.BookId && r.ParentReviewId == null);
+            if (exists)
+                return Request.Headers["X-Requested-With"] == "XMLHttpRequest"
+                    ? Json(new { success = false, message = "You have already reviewed this book." })
+                    : Conflict();
 
             review.UserId = user.Id;
             review.ReviewDate = DateTime.UtcNow;
-            review.ParentReviewId = null; // Top-level review
+            review.ParentReviewId = null;
 
             try
             {
@@ -147,17 +100,13 @@ namespace BookHive.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error saving review for book {BookId} by user {UserId}", review.BookId, user.Id);
-                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
-                {
-                    return Json(new { success = false, message = "An error occurred while saving your review: " + ex.Message });
-                }
-                TempData["ErrorMessage"] = "An error occurred while saving your review: " + ex.Message;
-                return RedirectToAction("Details", "Books", new { id = review.BookId });
+                _logger.LogError(ex, "Error saving review");
+                return Request.Headers["X-Requested-With"] == "XMLHttpRequest"
+                    ? Json(new { success = false, message = "Error saving review." })
+                    : StatusCode(500);
             }
 
             if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
-            {
                 return Json(new
                 {
                     success = true,
@@ -170,55 +119,36 @@ namespace BookHive.Controllers
                         reviewDate = review.ReviewDate.ToString("d MMM yyyy")
                     }
                 });
-            }
 
             TempData["SuccessMessage"] = "Review submitted successfully.";
             return RedirectToAction("Details", "Books", new { id = review.BookId });
         }
 
-        // POST: Reviews/CreateReply
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "User,Member")]
         public async Task<IActionResult> CreateReply(int bookId, int parentReviewId, string comment)
         {
             var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                return Json(new { success = false, message = "User not found." });
-            }
+            if (user == null) return Json(new { success = false, message = "User not found." });
 
             var book = await _context.Books.FindAsync(bookId);
-            if (book == null)
-            {
-                return Json(new { success = false, message = "Book not found." });
-            }
+            if (book == null) return Json(new { success = false, message = "Book not found." });
 
-            var parentReview = await _context.Reviews.FindAsync(parentReviewId);
-            if (parentReview == null || parentReview.BookId != bookId || parentReview.ParentReviewId != null)
-            {
-                return Json(new { success = false, message = "Parent review not found or invalid." });
-            }
+            var parent = await _context.Reviews.FindAsync(parentReviewId);
+            if (parent == null || parent.BookId != bookId || parent.ParentReviewId != null)
+                return Json(new { success = false, message = "Parent review not found." });
 
-            // Check if user has purchased the book
-            var hasPurchased = await _context.Orders
-                .AnyAsync(o => o.UserId == user.Id && o.BookId == bookId && !o.IsCancelled);
-            if (!hasPurchased)
-            {
-                return Json(new { success = false, message = "You must purchase the book before replying to a review." });
-            }
+            var purchased = await _context.Orders.AnyAsync(o => o.UserId == user.Id && o.BookId == bookId && !o.IsCancelled);
+            if (!purchased) return Json(new { success = false, message = "Purchase required to reply." });
 
-            // Validate comment
-            if (string.IsNullOrWhiteSpace(comment))
-            {
-                return Json(new { success = false, message = "Comment is required." });
-            }
+            if (string.IsNullOrWhiteSpace(comment)) return Json(new { success = false, message = "Comment is required." });
 
             var reply = new Review
             {
                 BookId = bookId,
                 UserId = user.Id,
-                Rating = 0, // Replies don't have ratings
+                Rating = 0,
                 Comment = comment,
                 ReviewDate = DateTime.UtcNow,
                 ParentReviewId = parentReviewId
@@ -231,14 +161,14 @@ namespace BookHive.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error saving reply for review {ParentReviewId} by user {UserId}", parentReviewId, user.Id);
-                return Json(new { success = false, message = "An error occurred while saving your reply: " + ex.Message });
+                _logger.LogError(ex, "Error saving reply");
+                return Json(new { success = false, message = "Error saving reply." });
             }
 
             return Json(new
             {
                 success = true,
-                message = "Reply submitted successfully!",
+                message = "Reply submitted successfully.",
                 reply = new
                 {
                     comment = reply.Comment,

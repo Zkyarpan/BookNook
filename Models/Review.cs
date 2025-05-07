@@ -1,4 +1,4 @@
-﻿namespace BookHive.Models
+﻿namespace BookNook.Models
 {
     public class Review
     {
@@ -7,6 +7,7 @@
         public ApplicationUser User { get; set; }
         public int BookId { get; set; }
         public Book Book { get; set; }
+
         public int? ParentReviewId { get; set; }
         public Review ParentReview { get; set; }
         public ICollection<Review> Replies { get; set; } = new List<Review>();
@@ -21,13 +22,11 @@
         public string Comment { get; set; }
         public int Rating { get; set; }
 
-        private DateTime EnsureUtc(DateTime dateTime)
-        {
-            if (dateTime.Kind == DateTimeKind.Unspecified)
-            {
-                return DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
-            }
-            return dateTime.Kind == DateTimeKind.Local ? dateTime.ToUniversalTime() : dateTime;
-        }
+        private static DateTime EnsureUtc(DateTime dt) =>
+            dt.Kind == DateTimeKind.Local
+                ? dt.ToUniversalTime()
+                : dt.Kind == DateTimeKind.Unspecified
+                    ? DateTime.SpecifyKind(dt, DateTimeKind.Utc)
+                    : dt;
     }
 }

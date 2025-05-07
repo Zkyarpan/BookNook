@@ -1,4 +1,6 @@
-﻿namespace BookHive.Models
+﻿using System;
+
+namespace BookNook.Models                
 {
     public class TimedAnnouncement
     {
@@ -27,13 +29,13 @@
             set => _expiresAt = EnsureUtc(value);
         }
 
-        private DateTime EnsureUtc(DateTime dateTime)
-        {
-            if (dateTime.Kind == DateTimeKind.Unspecified)
+        /* helper --------------------------------------------------------- */
+        private static DateTime EnsureUtc(DateTime dt) =>
+            dt.Kind switch
             {
-                return DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
-            }
-            return dateTime.Kind == DateTimeKind.Local ? dateTime.ToUniversalTime() : dateTime;
-        }
+                DateTimeKind.Utc => dt,
+                DateTimeKind.Unspecified => DateTime.SpecifyKind(dt, DateTimeKind.Utc),
+                _ /* local */          => dt.ToUniversalTime()
+            };
     }
 }

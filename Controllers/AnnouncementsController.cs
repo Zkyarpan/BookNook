@@ -1,11 +1,15 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using BookHive.Data;
-using BookHive.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.SignalR;
+using System;
+using System.Linq;
 using System.Threading.Tasks;
 
-namespace BookHive.Controllers
+using BookNook.Data;       
+using BookNook.Models;     
+
+namespace BookNook.Controllers
 {
     [Authorize]
     public class AnnouncementsController : Controller
@@ -17,126 +21,86 @@ namespace BookHive.Controllers
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
-        // GET: Announcements
+        /* ------------------------------------------------ INDEX -------- */
         public async Task<IActionResult> Index()
         {
-            var announcements = await _context.TimedAnnouncements
-                .Where(a => a.ExpiresAt >= DateTime.UtcNow)
-                .ToListAsync();
-            return View(announcements);
+            var list = await _context.TimedAnnouncements
+                                     .Where(a => a.ExpiresAt >= DateTime.UtcNow)
+                                     .ToListAsync();
+            return View(list);
         }
 
-        // GET: Announcements/Create
+        /* ------------------------------------------------ CREATE ------- */
         [Authorize(Roles = "Admin")]
-        public IActionResult Create()
-        {
-            return View(new TimedAnnouncement
+        public IActionResult Create() =>
+            View(new TimedAnnouncement
             {
                 StartDate = DateTime.UtcNow,
                 ExpiresAt = DateTime.UtcNow.AddDays(7),
                 CreatedAt = DateTime.UtcNow
             });
-        }
 
-        // POST: Announcements/Create
         [Authorize(Roles = "Admin")]
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(TimedAnnouncement model)
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(TimedAnnouncement m)
         {
-            if (!ModelState.IsValid)
-            {
-                return View(model);
-            }
+            if (!ModelState.IsValid) return View(m);
 
-            model.CreatedAt = DateTime.UtcNow;
-            _context.TimedAnnouncements.Add(model);
+            m.CreatedAt = DateTime.UtcNow;
+            _context.TimedAnnouncements.Add(m);
             await _context.SaveChangesAsync();
             TempData["SuccessMessage"] = "Announcement created successfully.";
             return RedirectToAction(nameof(Index));
         }
 
-        // GET: Announcements/Edit/{id}
+        /* ------------------------------------------------ EDIT --------- */
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Edit(int id)
         {
-            var announcement = await _context.TimedAnnouncements.FindAsync(id);
-            if (announcement == null)
-            {
-                return NotFound();
-            }
-            return View(announcement);
+            var a = await _context.TimedAnnouncements.FindAsync(id);
+            return a == null ? NotFound() : View(a);
         }
 
-        // POST: Announcements/Edit/{id}
         [Authorize(Roles = "Admin")]
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, TimedAnnouncement model)
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(int id, TimedAnnouncement m)
         {
-            if (id != model.Id)
-            {
-                return NotFound();
-            }
+            if (id != m.Id) return NotFound();
+            if (!ModelState.IsValid) return View(m);
 
-            if (!ModelState.IsValid)
-            {
-                return View(model);
-            }
+            var a = await _context.TimedAnnouncements.FindAsync(id);
+            if (a == null) return NotFound();
 
-            try
-            {
-                var announcement = await _context.TimedAnnouncements.FindAsync(id);
-                if (announcement == null)
-                {
-                    return NotFound();
-                }
+            a.Title = m.Title;
+            a.Message = m.Message;
+            a.StartDate = m.StartDate;
+            a.ExpiresAt = m.ExpiresAt;
 
-                announcement.Title = model.Title;
-                announcement.Message = model.Message;
-                announcement.StartDate = model.StartDate;
-                announcement.ExpiresAt = model.ExpiresAt;
-                _context.Update(announcement);
-                await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = "Announcement updated successfully.";
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!await _context.TimedAnnouncements.AnyAsync(e => e.Id == id))
-                {
-                    return NotFound();
-                }
-                throw;
-            }
-
+            _context.Update(a);
+            await _context.SaveChangesAsync();
+            TempData["SuccessMessage"] = "Announcement updated successfully.";
             return RedirectToAction(nameof(Index));
         }
 
-        // GET: Announcements/Delete/{id}
+        /* ------------------------------------------------ DELETE ------- */
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int id)
         {
-            var announcement = await _context.TimedAnnouncements.FindAsync(id);
-            if (announcement == null)
-            {
-                return NotFound();
-            }
-            return View(announcement);
+            var a = await _context.TimedAnnouncements.FindAsync(id);
+            return a == null ? NotFound() : View(a);
         }
 
-        // POST: Announcements/DeleteConfirmed/{id}
         [Authorize(Roles = "Admin")]
-        [HttpPost, ActionName("Delete")]
-        [ValidateAntiForgeryToken]
+        [HttpPost, ActionName("Delete"), ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var announcement = await _context.TimedAnnouncements.FindAsync(id);
-            if (announcement != null)
+            var a = await _context.TimedAnnouncements.FindAsync(id);
+            if (a != null)
             {
-                _context.TimedAnnouncements.Remove(announcement);
+                _context.TimedAnnouncements.Remove(a);
                 await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = "Announcement deleted successfully.";
             }
-            TempData["SuccessMessage"] = "Announcement deleted successfully.";
             return RedirectToAction(nameof(Index));
         }
     }

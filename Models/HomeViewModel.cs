@@ -1,4 +1,6 @@
-﻿namespace BookHive.Models
+﻿using BookHive.Models;
+
+namespace BookNook.Models
 {
     public class HomeViewModel
     {

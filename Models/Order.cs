@@ -1,51 +1,65 @@
-﻿namespace BookHive.Models
+﻿using System;
+using BookNook.Models;
+
+namespace BookHive.Models
 {
     public class Order
     {
-        public string UserId { get; set; }
-        public ApplicationUser User { get; set; }
-        public int BookId { get; set; }
-        public Book Book { get; set; }
+        /* ─────────────  book & user  ───────────── */
+        public string UserId { get; set; } = string.Empty;
+        public ApplicationUser User { get; set; } = null!;
 
-        private DateTime _orderDate;
+        public int BookId { get; set; }
+        public Book Book { get; set; } = null!;
+
+        /* ─────────────  dates  ───────────── */
+        private DateTime _orderDate = DateTime.UtcNow;
         public DateTime OrderDate
         {
             get => _orderDate;
-            set => _orderDate = value.Kind == DateTimeKind.Utc ? value : value.ToUniversalTime();
+            set => _orderDate = value.Kind == DateTimeKind.Utc
+                                    ? value
+                                    : value.ToUniversalTime();
         }
-
-        public decimal TotalPrice { get; set; }
-        public int Quantity { get; set; }
-        public bool IsCancelled { get; set; }
 
         private DateTime? _cancelledAt;
         public DateTime? CancelledAt
         {
             get => _cancelledAt;
-            set => _cancelledAt = value.HasValue ? (value.Value.Kind == DateTimeKind.Utc ? value.Value : value.Value.ToUniversalTime()) : null;
+            set => _cancelledAt = value is null
+                                     ? null
+                                     : (value.Value.Kind == DateTimeKind.Utc
+                                           ? value.Value
+                                           : value.Value.ToUniversalTime());
         }
-
-        public string ClaimCode { get; set; }
-
-        public bool IsFulfilled { get; set; }
 
         private DateTime? _fulfilledAt;
         public DateTime? FulfilledAt
         {
             get => _fulfilledAt;
-            set => _fulfilledAt = value.HasValue ? (value.Value.Kind == DateTimeKind.Utc ? value.Value : value.Value.ToUniversalTime()) : null;
+            set => _fulfilledAt = value is null
+                                     ? null
+                                     : (value.Value.Kind == DateTimeKind.Utc
+                                           ? value.Value
+                                           : value.Value.ToUniversalTime());
         }
 
-        public string Status { get; set; } // New property to track order status (e.g., "Placed", "Received", "Cancelled")
+        /* ─────────────  price / qty / status  ───────────── */
+        public decimal TotalPrice { get; set; }
+        public int Quantity { get; set; }
 
+        public string ClaimCode { get; set; } = string.Empty;   //  e.g. “AB12‑CD34”
+        public string Status { get; set; } = "Placed";       //  “Placed”, “Received”, “Cancelled” …
+
+        public bool IsCancelled { get; set; }
+        public bool IsFulfilled { get; set; }
+
+        /* ─────────────  helpers  ───────────── */
+        /// <summary> True while the order is still inside its 24‑hour “grace period”. </summary>
         public bool IsCancellable
-        {
-            get
-            {
-                if (IsCancelled || IsFulfilled || Status == "Received") return false; // Cannot cancel if cancelled, fulfilled, or received
-                var cancellationWindow = TimeSpan.FromHours(24); // 24-hour cancellation window
-                return (DateTime.UtcNow - OrderDate) <= cancellationWindow;
-            }
-        }
+            => !IsCancelled
+               && !IsFulfilled
+               && Status != "Received"
+               && (DateTime.UtcNow - OrderDate) <= TimeSpan.FromHours(24);
     }
 }

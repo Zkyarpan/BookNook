@@ -1,16 +1,18 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using BookHive.Models;
+﻿using System;
+using System.Globalization;
+using System.Linq;
 using System.Threading.Tasks;
-using BookHive.Data;
+using BookHive.Hubs;
+using BookNook.Data;
+using BookNook.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Microsoft.AspNetCore.Identity;
-using System.Globalization;
-using Microsoft.AspNetCore.SignalR;
-using BookHive.Hubs;
 
-namespace BookHive.Controllers
+namespace BookNook.Controllers
 {
     [Authorize]
     public class OrdersController : Controller
@@ -35,16 +37,11 @@ namespace BookHive.Controllers
             _orderHubContext = orderHubContext ?? throw new ArgumentNullException(nameof(orderHubContext));
         }
 
-        // GET: Orders/MyOrders
         [Authorize(Roles = "User,Member")]
         public async Task<IActionResult> MyOrders()
         {
             var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                _logger.LogWarning("User not found for viewing orders.");
-                return NotFound("User not found.");
-            }
+            if (user == null) return NotFound("User not found.");
 
             var orders = await _context.Orders
                 .Where(o => o.UserId == user.Id)
@@ -55,303 +52,137 @@ namespace BookHive.Controllers
             return View("~/Views/User/MyOrders.cshtml", orders);
         }
 
-        // POST: Orders/CancelOrder (Single order cancellation)
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "User,Member")]
         public async Task<IActionResult> CancelOrder(string userId, int bookId, DateTime orderDate)
         {
             var user = await _userManager.GetUserAsync(User);
-            if (user == null || user.Id != userId)
-            {
-                _logger.LogWarning("User not found or unauthorized to cancel order.");
-                return NotFound("User not found or unauthorized.");
-            }
+            if (user == null || user.Id != userId) return NotFound("User not found or unauthorized.");
 
             var order = await _context.Orders
                 .Include(o => o.Book)
                 .FirstOrDefaultAsync(o => o.UserId == userId && o.BookId == bookId && o.OrderDate == orderDate);
 
-            if (order == null)
-            {
-                TempData["ErrorMessage"] = "Order not found.";
-                return RedirectToAction(nameof(MyOrders));
-            }
+            if (order == null) { TempData["ErrorMessage"] = "Order not found."; return RedirectToAction(nameof(MyOrders)); }
 
-            // If the order is "Received" or "Cancelled", redirect to DeleteOrder
-            if (order.Status == "Received" || order.IsCancelled)
-            {
-                return await DeleteOrder(userId, bookId, orderDate);
-            }
+            if (order.Status == "Received" || order.IsCancelled) return await DeleteOrder(userId, bookId, orderDate);
 
-            if (!order.IsCancellable)
-            {
-                TempData["ErrorMessage"] = "This order cannot be cancelled. It may be past the 24-hour cancellation window.";
-                return RedirectToAction(nameof(MyOrders));
-            }
+            if (!order.IsCancellable) { TempData["ErrorMessage"] = "This order cannot be cancelled."; return RedirectToAction(nameof(MyOrders)); }
 
-            // Cancel the order
             order.IsCancelled = true;
             order.CancelledAt = DateTime.UtcNow;
             order.Status = "Cancelled";
-
-            // Restore book quantity
             order.Book.Quantity += order.Quantity;
 
             await _context.SaveChangesAsync();
-
-            // Broadcast updated order count to all clients
-            int updatedOrderCount = await _context.Orders
-                .Where(o => o.UserId == user.Id && !o.IsCancelled && o.Status != "Received")
-                .CountAsync();
-            await _orderHubContext.Clients.All.SendAsync("UpdateOrderCount", updatedOrderCount);
+            await UpdateOrderCount(user.Id);
 
             TempData["SuccessMessage"] = "Order cancelled successfully.";
             return RedirectToAction(nameof(MyOrders));
         }
 
-        // POST: Orders/DeleteOrder (Single order deletion)
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "User,Member")]
         public async Task<IActionResult> DeleteOrder(string userId, int bookId, DateTime orderDate)
         {
             var user = await _userManager.GetUserAsync(User);
-            if (user == null || user.Id != userId)
-            {
-                _logger.LogWarning("User not found or unauthorized to delete order.");
-                return NotFound("User not found or unauthorized.");
-            }
+            if (user == null || user.Id != userId) return NotFound("User not found or unauthorized.");
 
             var order = await _context.Orders
                 .FirstOrDefaultAsync(o => o.UserId == userId && o.BookId == bookId && o.OrderDate == orderDate);
 
-            if (order == null)
-            {
-                TempData["ErrorMessage"] = "Order not found.";
-                return RedirectToAction(nameof(MyOrders));
-            }
+            if (order == null) { TempData["ErrorMessage"] = "Order not found."; return RedirectToAction(nameof(MyOrders)); }
 
-            // Only allow deletion if the order is "Received" or "Cancelled"
             if (order.Status != "Received" && !order.IsCancelled)
             {
                 TempData["ErrorMessage"] = "Only received or cancelled orders can be deleted.";
                 return RedirectToAction(nameof(MyOrders));
             }
 
-            // Delete the order
             _context.Orders.Remove(order);
             await _context.SaveChangesAsync();
-
-            // Broadcast updated order count to all clients (though count won't change since this order was already "Received" or "Cancelled")
-            int updatedOrderCount = await _context.Orders
-                .Where(o => o.UserId == user.Id && !o.IsCancelled && o.Status != "Received")
-                .CountAsync();
-            await _orderHubContext.Clients.All.SendAsync("UpdateOrderCount", updatedOrderCount);
+            await UpdateOrderCount(user.Id);
 
             TempData["SuccessMessage"] = "Order deleted successfully.";
             return RedirectToAction(nameof(MyOrders));
         }
 
-        // POST: Orders/CancelOrders (Bulk cancellation)
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "User,Member")]
         public async Task<IActionResult> CancelOrders(string[] selectedOrders)
         {
             var user = await _userManager.GetUserAsync(User);
-            if (user == null)
+            if (user == null) return NotFound("User not found.");
+            if (selectedOrders == null || !selectedOrders.Any()) { TempData["ErrorMessage"] = "No orders selected."; return RedirectToAction(nameof(MyOrders)); }
+
+            int cancelled = 0;
+            foreach (var sel in selectedOrders)
             {
-                _logger.LogWarning("User not found for cancelling orders.");
-                return NotFound("User not found.");
-            }
+                var parts = sel.Split('|');
+                if (parts.Length != 3 || parts[0] != user.Id) continue;
+                if (!int.TryParse(parts[1], out var bookId)) continue;
+                if (!DateTime.TryParse(parts[2], CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var dt)) continue;
+                dt = dt.Kind == DateTimeKind.Utc ? dt : dt.ToUniversalTime();
 
-            if (selectedOrders == null || !selectedOrders.Any())
-            {
-                TempData["ErrorMessage"] = "No orders selected for cancellation.";
-                return RedirectToAction(nameof(MyOrders));
-            }
+                var order = await _context.Orders.Include(o => o.Book)
+                    .FirstOrDefaultAsync(o => o.UserId == user.Id && o.BookId == bookId && o.OrderDate == dt);
+                if (order == null || order.IsCancelled || order.Status == "Received" || !order.IsCancellable) continue;
 
-            int cancelledCount = 0;
-            foreach (var selectedOrder in selectedOrders)
-            {
-                var parts = selectedOrder.Split('|');
-                if (parts.Length != 3)
-                {
-                    _logger.LogWarning("Invalid selected order format: {SelectedOrder}", selectedOrder);
-                    continue;
-                }
-
-                var userId = parts[0];
-                if (userId != user.Id)
-                {
-                    _logger.LogWarning("Unauthorized attempt to cancel order for user {UserId}", userId);
-                    continue;
-                }
-
-                if (!int.TryParse(parts[1], out var bookId))
-                {
-                    _logger.LogWarning("Invalid book ID in selected order: {BookId}", parts[1]);
-                    continue;
-                }
-
-                if (!DateTime.TryParse(parts[2], CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsedDateTime))
-                {
-                    _logger.LogWarning("Invalid order date in selected order: {OrderDate}", parts[2]);
-                    continue;
-                }
-
-                var orderDate = parsedDateTime.Kind == DateTimeKind.Utc ? parsedDateTime : parsedDateTime.ToUniversalTime();
-
-                var order = await _context.Orders
-                    .Include(o => o.Book)
-                    .FirstOrDefaultAsync(o => o.UserId == userId && o.BookId == bookId && o.OrderDate == orderDate);
-
-                if (order == null)
-                {
-                    _logger.LogWarning("Order not found for user {UserId}, book {BookId}, date {OrderDate}", userId, bookId, orderDate);
-                    continue;
-                }
-
-                // If the order is "Received" or "Cancelled", redirect to bulk delete
-                if (order.Status == "Received" || order.IsCancelled)
-                {
-                    continue; // Handle in DeleteOrders
-                }
-
-                if (order.IsCancelled)
-                {
-                    _logger.LogWarning("Attempted to cancel an already cancelled order for user {UserId}, book {BookId}", userId, bookId);
-                    continue;
-                }
-
-                if (!order.IsCancellable)
-                {
-                    _logger.LogWarning("Order is not cancellable for user {UserId}, book {BookId}", userId, bookId);
-                    continue;
-                }
-
-                // Cancel the order
                 order.IsCancelled = true;
                 order.CancelledAt = DateTime.UtcNow;
                 order.Status = "Cancelled";
-
-                // Restore book quantity
                 order.Book.Quantity += order.Quantity;
-
-                cancelledCount++;
+                cancelled++;
             }
 
             await _context.SaveChangesAsync();
-
-            // Now handle deletions for "Received" or "Cancelled" orders
             await DeleteOrders(selectedOrders);
+            await UpdateOrderCount(user.Id);
 
-            // Broadcast updated order count to all clients
-            int updatedOrderCount = await _context.Orders
-                .Where(o => o.UserId == user.Id && !o.IsCancelled && o.Status != "Received")
-                .CountAsync();
-            await _orderHubContext.Clients.All.SendAsync("UpdateOrderCount", updatedOrderCount);
-
-            if (cancelledCount > 0)
-            {
-                TempData["SuccessMessage"] = $"{cancelledCount} order(s) cancelled successfully.";
-            }
-            else
-            {
-                TempData["ErrorMessage"] = "No orders were cancelled. They may already be cancelled or past the cancellation window.";
-            }
-
+            TempData["SuccessMessage"] = cancelled > 0 ? $"{cancelled} order(s) cancelled." : "No orders were cancelled.";
             return RedirectToAction(nameof(MyOrders));
         }
 
-        // POST: Orders/DeleteOrders (Bulk deletion)
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "User,Member")]
         public async Task<IActionResult> DeleteOrders(string[] selectedOrders)
         {
             var user = await _userManager.GetUserAsync(User);
-            if (user == null)
+            if (user == null) { TempData["ErrorMessage"] = "User not found."; return RedirectToAction(nameof(MyOrders)); }
+            if (selectedOrders == null || !selectedOrders.Any()) { TempData["ErrorMessage"] = "No orders selected."; return RedirectToAction(nameof(MyOrders)); }
+
+            int deleted = 0;
+            foreach (var sel in selectedOrders)
             {
-                _logger.LogWarning("User not found for deleting orders.");
-                TempData["ErrorMessage"] = "User not found.";
-                return RedirectToAction(nameof(MyOrders));
-            }
+                var parts = sel.Split('|');
+                if (parts.Length != 3 || parts[0] != user.Id) continue;
+                if (!int.TryParse(parts[1], out var bookId)) continue;
+                if (!DateTime.TryParse(parts[2], CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var dt)) continue;
+                dt = dt.Kind == DateTimeKind.Utc ? dt : dt.ToUniversalTime();
 
-            if (selectedOrders == null || !selectedOrders.Any())
-            {
-                TempData["ErrorMessage"] = "No orders selected for deletion.";
-                return RedirectToAction(nameof(MyOrders));
-            }
+                var order = await _context.Orders.FirstOrDefaultAsync(o => o.UserId == user.Id && o.BookId == bookId && o.OrderDate == dt);
+                if (order == null) continue;
+                if (order.Status != "Received" && !order.IsCancelled) continue;
 
-            int deletedCount = 0;
-
-            foreach (var selectedOrder in selectedOrders)
-            {
-                var parts = selectedOrder.Split('|');
-                if (parts.Length != 3)
-                {
-                    _logger.LogWarning("Invalid selected order format: {SelectedOrder}", selectedOrder);
-                    continue;
-                }
-
-                var userId = parts[0];
-                if (userId != user.Id)
-                {
-                    _logger.LogWarning("Unauthorized attempt to delete order for user {UserId}", userId);
-                    continue;
-                }
-
-                if (!int.TryParse(parts[1], out var bookId))
-                {
-                    _logger.LogWarning("Invalid book ID in selected order: {BookId}", parts[1]);
-                    continue;
-                }
-
-                if (!DateTime.TryParse(parts[2], CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsedDateTime))
-                {
-                    _logger.LogWarning("Invalid order date in selected order: {OrderDate}", parts[2]);
-                    continue;
-                }
-
-                var orderDate = parsedDateTime.Kind == DateTimeKind.Utc ? parsedDateTime : parsedDateTime.ToUniversalTime();
-
-                var order = await _context.Orders
-                    .FirstOrDefaultAsync(o => o.UserId == userId && o.BookId == bookId && o.OrderDate == orderDate);
-
-                if (order == null)
-                {
-                    _logger.LogWarning("Order not found for user {UserId}, book {BookId}, date {OrderDate}", userId, bookId, orderDate);
-                    continue;
-                }
-
-                // Only delete if the order is "Received" or "Cancelled"
-                if (order.Status != "Received" && !order.IsCancelled)
-                {
-                    _logger.LogWarning("Order is not in a deletable state for user {UserId}, book {BookId}", userId, bookId);
-                    continue;
-                }
-
-                // Delete the order
                 _context.Orders.Remove(order);
-                deletedCount++;
+                deleted++;
             }
 
             await _context.SaveChangesAsync();
+            await UpdateOrderCount(user.Id);
 
-            // Broadcast updated order count to all clients
-            int updatedOrderCount = await _context.Orders
-                .Where(o => o.UserId == user.Id && !o.IsCancelled && o.Status != "Received")
-                .CountAsync();
-            await _orderHubContext.Clients.All.SendAsync("UpdateOrderCount", updatedOrderCount);
-
-            if (deletedCount > 0)
-            {
-                TempData["SuccessMessage"] = TempData["SuccessMessage"]?.ToString() + $" {deletedCount} order(s) deleted successfully.";
-            }
-
+            if (deleted > 0) TempData["SuccessMessage"] = (TempData["SuccessMessage"]?.ToString() + $" {deleted} order(s) deleted.").Trim();
             return RedirectToAction(nameof(MyOrders));
+        }
+
+        private async Task UpdateOrderCount(string userId)
+        {
+            var count = await _context.Orders.Where(o => o.UserId == userId && !o.IsCancelled && o.Status != "Received").CountAsync();
+            await _orderHubContext.Clients.All.SendAsync("UpdateOrderCount", count);
         }
     }
 }

@@ -2,15 +2,15 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace BookHive.Models
+namespace BookNook.Models   
 {
     public class ApplicationUser : IdentityUser
     {
         public string? ProfileImageUrl { get; set; }
         public string? FirstName { get; set; }
-        public string? LastName { get; set; } // Added for completeness, as seen in the query
+        public string? LastName { get; set; }
 
-        [NotMapped] // Ignore this property in the database
+        [NotMapped]                    
         public List<string> Roles { get; set; } = new List<string>();
     }
 }

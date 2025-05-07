@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Http;
 
-namespace BookHive.Models
+namespace BookNook.Models
 {
     public class BookViewModel
     {
@@ -26,7 +27,6 @@ namespace BookHive.Models
         public int Quantity { get; set; }
 
         public string CoverImageUrl { get; set; }
-
         public IFormFile CoverImage { get; set; }
     }
 }

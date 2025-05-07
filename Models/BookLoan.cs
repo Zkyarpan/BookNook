@@ -1,4 +1,4 @@
-﻿namespace BookHive.Models
+﻿namespace BookNook.Models
 {
     public class BookLoan
     {
@@ -28,13 +28,11 @@
             set => _dueDate = EnsureUtc(value);
         }
 
-        private DateTime EnsureUtc(DateTime dateTime)
-        {
-            if (dateTime.Kind == DateTimeKind.Unspecified)
-            {
-                return DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
-            }
-            return dateTime.Kind == DateTimeKind.Local ? dateTime.ToUniversalTime() : dateTime;
-        }
+        private static DateTime EnsureUtc(DateTime dt) =>
+            dt.Kind == DateTimeKind.Local
+                ? dt.ToUniversalTime()
+                : dt.Kind == DateTimeKind.Unspecified
+                    ? DateTime.SpecifyKind(dt, DateTimeKind.Utc)
+                    : dt;
     }
 }
