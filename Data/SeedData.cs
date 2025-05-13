@@ -1,4 +1,4 @@
-﻿using BookHive.Models;
+﻿using BookNook.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -6,7 +6,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace BookHive.Data
+namespace BookNook.Data
 {
     public static class SeedData
     {
@@ -82,7 +82,7 @@ namespace BookHive.Data
                         Title = "To Kill a Mockingbird",
                         Author = "Harper Lee",
                         Description = "A gripping tale of racial injustice and the loss of innocence in a small Southern town.",
-                        CoverImageUrl = "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+                        CoverImageUrl = "https://images.unsplash.com/photo-1544947950-fa07a98d237f?q=80&w=1974&auto=format&fit=crop",
                         AddedDate = DateTime.UtcNow.AddDays(-10),
                         Price = 10.99m,
                         Quantity = 100,
@@ -101,7 +101,7 @@ namespace BookHive.Data
                         Title = "1984",
                         Author = "George Orwell",
                         Description = "A dystopian novel about totalitarian surveillance and control.",
-                        CoverImageUrl = "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+                        CoverImageUrl = "https://images.unsplash.com/photo-1541963463532-d68292c34b19?q=80&w=1976&auto=format&fit=crop",
                         AddedDate = DateTime.UtcNow.AddDays(-5),
                         Price = 12.99m,
                         Quantity = 80,
@@ -120,7 +120,7 @@ namespace BookHive.Data
                         Title = "Pride and Prejudice",
                         Author = "Jane Austen",
                         Description = "A romantic novel about the Bennet sisters and their marriage prospects.",
-                        CoverImageUrl = "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+                        CoverImageUrl = "https://images.unsplash.com/photo-1589829085413-56de8ae18c73?q=80&w=1992&auto=format&fit=crop",
                         AddedDate = DateTime.UtcNow.AddDays(-2),
                         Price = 9.99m,
                         Quantity = 120,

@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using BookHive.Models;
+using BookNook.Models;
 using System.Threading.Tasks;
 using System.IO;
 using Microsoft.Extensions.Configuration;
@@ -10,7 +10,7 @@ using System.Net.Mail;
 using System.Net;
 using System.Text.Encodings.Web;
 
-namespace BookHive.Controllers
+namespace BookNook.Controllers
 {
     [Authorize]
     public class ProfileController : Controller
@@ -215,11 +215,11 @@ namespace BookHive.Controllers
 
                 await SendEmailAsync(
                     user.Email,
-                    "Reset Your BookHive Password",
+                    "Reset Your BookNook Password",
                     $"<p>Dear {user.FirstName ?? "User"},</p>" +
                     $"<p>Please reset your password by <a href='{HtmlEncoder.Default.Encode(resetLink)}'>clicking here</a>.</p>" +
                     "<p>This link will expire in 24 hours.</p>" +
-                    "<p>Best regards,<br>BookHive Team</p>");
+                    "<p>Best regards,<br>BookNook Team</p>");
 
                 TempData["SuccessMessage"] = "Password reset link sent to your email.";
                 return RedirectToAction("ViewProfile");

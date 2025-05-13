@@ -1,61 +1,81 @@
-﻿@model BookHive.Models.Book
+﻿@model BookNook.Models.Book
 
 @{
     ViewData["Title"] = "Delete Book";
+    Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
 <div class="container mx-auto px-4 py-6">
-    <h2 class="text-2xl font-bold text-center text-amber-900 mb-6">Delete Book</h2>
+    <h2 class="text-3xl font-merriweather text-[#4b2e83] text-center mb-8">Delete Book</h2>
 
+    @* Success / Error Messages *@
     @if (TempData["SuccessMessage"] != null)
     {
-        <div class="bg-green-100 text-green-700 p-2 rounded mb-4 text-center text-sm">
+        <div class="bg-green-100 text-green-700 p-4 rounded-lg mb-6 text-center">
             @TempData["SuccessMessage"]
         </div>
     }
-
     @if (TempData["ErrorMessage"] != null)
     {
-        <div class="bg-red-100 text-red-700 p-2 rounded mb-4 text-center text-sm">
+        <div class="bg-red-100 text-red-700 p-4 rounded-lg mb-6 text-center">
             @TempData["ErrorMessage"]
         </div>
     }
 
-    <div class="bg-amber-50 rounded-lg shadow-md p-6 max-w-lg mx-auto">
-        <h3 class="text-lg font-semibold text-amber-800 mb-4">Are you sure you want to delete this book?</h3>
-        <dl class="grid grid-cols-1 gap-x-4 gap-y-2">
-            <dt class="text-sm font-medium text-gray-700">Title</dt>
-            <dd class="text-sm text-gray-900">@Model.Title</dd>
+    <div class="bg-white rounded-2xl shadow-lg p-8 max-w-2xl mx-auto font-inter">
+        <p class="text-lg font-semibold text-[#fbbf24] mb-6 text-center">
+            Are you sure you want to delete this book?
+        </p>
 
-            <dt class="text-sm font-medium text-gray-700">Author</dt>
-            <dd class="text-sm text-gray-900">@Model.Author</dd>
-
-            <dt class="text-sm font-medium text-gray-700">Description</dt>
-            <dd class="text-sm text-gray-900">@Model.Description</dd>
-
-            <dt class="text-sm font-medium text-gray-700">Price</dt>
-            <dd class="text-sm text-gray-900">$@Model.Price</dd>
-
-            <dt class="text-sm font-medium text-gray-700">Quantity</dt>
-            <dd class="text-sm text-gray-900">@Model.Quantity</dd>
-
-            <dt class="text-sm font-medium text-gray-700">Cover Image</dt>
-            <dd class="text-sm text-gray-900">
-                @if (!string.IsNullOrEmpty(Model.CoverImageUrl))
-                {
-                    <img src="@Model.CoverImageUrl" alt="@Model.Title" class="w-32 h-32 object-cover rounded" />
-                }
-                else
-                {
-                    <span>No Image</span>
-                }
-            </dd>
+        <dl class="grid grid-cols-1 gap-y-4 gap-x-8 text-sm text-gray-800">
+            <div class="flex">
+                <dt class="w-32 font-medium text-gray-700">Title:</dt>
+                <dd class="flex-1">@Model.Title</dd>
+            </div>
+            <div class="flex">
+                <dt class="w-32 font-medium text-gray-700">Author:</dt>
+                <dd class="flex-1">@Model.Author</dd>
+            </div>
+            <div class="flex">
+                <dt class="w-32 font-medium text-gray-700">Price:</dt>
+                <dd class="flex-1">$@Model.Price</dd>
+            </div>
+            <div class="flex">
+                <dt class="w-32 font-medium text-gray-700">Quantity:</dt>
+                <dd class="flex-1">@Model.Quantity</dd>
+            </div>
+            <div class="flex">
+                <dt class="w-32 font-medium text-gray-700">Cover:</dt>
+                <dd class="flex-1">
+                    @if (!string.IsNullOrEmpty(Model.CoverImageUrl))
+                    {
+                        <img src="@Model.CoverImageUrl"
+                             alt="@Model.Title"
+                             class="w-32 h-32 object-cover rounded-lg shadow-sm" />
+                    }
+                    else
+                    {
+                        <span class="text-gray-500">No image available</span>
+                    }
+                </dd>
+            </div>
+            <div class="flex">
+                <dt class="w-32 font-medium text-gray-700">Description:</dt>
+                <dd class="flex-1">@Model.Description</dd>
+            </div>
         </dl>
 
-        <form asp-action="Delete" method="post" class="mt-6 text-center">
+        <form asp-action="Delete" method="post" class="mt-8 text-center">
             <input type="hidden" asp-for="Id" />
-            <button type="submit" class="inline-block bg-red-600 text-white font-medium text-sm py-1.5 px-3 rounded hover:bg-red-700">Delete</button>
-            <a asp-action="Index" class="inline-block bg-gray-500 text-white font-medium text-sm py-1.5 px-3 rounded hover:bg-gray-600 ml-2">Cancel</a>
+
+            <button type="submit"
+                    class="inline-block bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-6 rounded-lg transition">
+                Yes, Delete
+            </button>
+            <a asp-action="Index"
+               class="inline-block bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-6 rounded-lg ml-4 transition">
+                Cancel
+            </a>
         </form>
     </div>
 </div>

@@ -1,16 +1,15 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using BookHive.Data;
-using BookHive.Models;
+using BookNook.Data;
+using BookNook.Models;
 using Microsoft.EntityFrameworkCore;
-using System.IO;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.SignalR;
-using BookHive.Hubs;
+using BookNook.Hubs;
 
-namespace BookHive.Controllers
+
+namespace BookNook.Controllers
 {
     public class BooksController : Controller
     {
@@ -19,6 +18,9 @@ namespace BookHive.Controllers
         private readonly ILogger<BooksController> _logger;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IHubContext<OrderNotificationHub> _hubContext;
+
+        private const long MaxFileSize = 5 * 1024 * 1024; // 5MB in bytes
+        private readonly string[] AllowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
 
         public BooksController(
             ApplicationDbContext context,
@@ -32,6 +34,111 @@ namespace BookHive.Controllers
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _userManager = userManager ?? throw new ArgumentNullException(nameof(userManager));
             _hubContext = hubContext ?? throw new ArgumentNullException(nameof(hubContext));
+        }
+
+        // Helper method to log errors and set TempData
+        private void HandleError(string message, Exception ex = null, string title = null)
+        {
+            if (ex != null)
+            {
+                if (title != null)
+                {
+                    _logger.LogError(ex, "{Message} for book {BookTitle}", message, title);
+                }
+                else
+                {
+                    _logger.LogError(ex, "{Message}", message);
+                }
+                message = $"{message}: {ex.Message}";
+            }
+            else
+            {
+                if (title != null)
+                {
+                    _logger.LogWarning("{Message} for book {BookTitle}", message, title);
+                }
+                else
+                {
+                    _logger.LogWarning("{Message}", message);
+                }
+            }
+            TempData["ErrorMessage"] = message;
+        }
+
+        // Helper method to get the current user
+        private async Task<ApplicationUser> GetCurrentUserAsync()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                _logger.LogWarning("User not found");
+            }
+            return user;
+        }
+
+        // Helper method to check if the user has cart items
+        private async Task<bool> HasCartItemsAsync(ApplicationUser user)
+        {
+            if (user == null) return false;
+            return await _context.Carts.AnyAsync(c => c.UserId == user.Id);
+        }
+
+        // Helper method to handle file uploads
+        private async Task<string> HandleFileUploadAsync(IFormFile file, string uploadsFolder, string oldFilePath = null)
+        {
+            // Validate file type
+            var fileExtension = Path.GetExtension(file.FileName).ToLower();
+            if (!AllowedExtensions.Contains(fileExtension))
+            {
+                throw new Exception("Only JPG, JPEG, PNG, and GIF files are allowed.");
+            }
+
+            // Validate file size
+            if (file.Length > MaxFileSize)
+            {
+                throw new Exception("The cover image file size must not exceed 5MB.");
+            }
+
+            // Create uploads directory if it doesn't exist
+            if (!Directory.Exists(uploadsFolder))
+            {
+                try
+                {
+                    Directory.CreateDirectory(uploadsFolder);
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception("Failed to create upload directory", ex);
+                }
+            }
+
+            // Save the new file
+            var uniqueFileName = Guid.NewGuid().ToString() + "_" + Path.GetFileName(file.FileName);
+            var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+            try
+            {
+                using (var fileStream = new FileStream(filePath, FileMode.Create))
+                {
+                    await file.CopyToAsync(fileStream);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Failed to save cover image", ex);
+            }
+
+            // Delete the old file if it exists
+            if (!string.IsNullOrEmpty(oldFilePath))
+            {
+                var oldFullPath = Path.Combine(_webHostEnvironment.WebRootPath, oldFilePath.TrimStart('/'));
+                if (System.IO.File.Exists(oldFullPath))
+                {
+                    System.IO.File.Delete(oldFullPath);
+                }
+            }
+
+            return "/images/book-covers/" + uniqueFileName;
         }
 
         // GET: Books/Index
@@ -51,10 +158,11 @@ namespace BookHive.Controllers
             string language = "",
             string format = "",
             string publisher = "",
+            bool? isComingSoon = null,
             string isbn = "")
         {
             var query = _context.Books.AsQueryable();
-
+            var booksQuery = _context.Books.Include(b => b.Reviews).AsQueryable();
             // Search by title, ISBN, or description
             if (!string.IsNullOrEmpty(search))
             {
@@ -118,7 +226,7 @@ namespace BookHive.Controllers
             // Filter by format
             if (!string.IsNullOrEmpty(format))
             {
-                query = query.Where(b => b.Format != null && b.Format.ToLower() == format.ToLower());
+                query = query.Where(b => b.Format != null && b.Format.ToLower().Equals(format, StringComparison.CurrentCultureIgnoreCase));
             }
 
             // Filter by publisher
@@ -127,7 +235,21 @@ namespace BookHive.Controllers
                 query = query.Where(b => b.Publisher != null && b.Publisher.ToLower().Contains(publisher.ToLower()));
             }
 
-            // Filter by ISBN (already handled in search)
+            // Apply "Coming Soon" filter from the sidebar
+            DateTime currentDate = DateTime.SpecifyKind(new DateTime(2025, 5, 13), DateTimeKind.Utc);
+            if (isComingSoon.HasValue)
+            {
+                if (isComingSoon.Value)
+                {
+                    // Show only books that are coming soon and not yet released
+                    query = query.Where(b => b.IsComingSoon && b.ReleaseDate.HasValue && b.ReleaseDate.Value > currentDate);
+                }
+                else
+                {
+                    // Show only books that are released or not marked as coming soon
+                    query = query.Where(b => !b.IsComingSoon || !b.ReleaseDate.HasValue || b.ReleaseDate.Value <= currentDate);
+                }
+            }
 
             // Category tabs
             switch (category.ToLower())
@@ -139,26 +261,22 @@ namespace BookHive.Controllers
                     query = query.Where(b => b.IsAwardWinner);
                     break;
                 case "newreleases":
-                    // Books published in the past 3 months
                     var threeMonthsAgo = DateTime.UtcNow.AddMonths(-3);
                     query = query.Where(b => b.PublicationDate >= threeMonthsAgo);
                     break;
                 case "newarrivals":
-                    // Books listed in the past month
                     var oneMonthAgo = DateTime.UtcNow.AddMonths(-1);
                     query = query.Where(b => b.AddedDate >= oneMonthAgo);
                     break;
                 case "comingsoon":
-                    // Books with a future publication date
-                    query = query.Where(b => b.PublicationDate > DateTime.UtcNow);
+                    // Updated to use IsComingSoon and ReleaseDate instead of PublicationDate
+                    query = query.Where(b => b.IsComingSoon && b.ReleaseDate.HasValue && b.ReleaseDate.Value > currentDate);
                     break;
                 case "deals":
-                    // Books with active discounts
                     query = query.Where(b => _context.TimedDiscounts.Any(td => td.BookId == b.Id && td.StartDate <= DateTime.UtcNow && td.ExpiresAt >= DateTime.UtcNow));
                     break;
                 case "all":
                 default:
-                    // No additional filtering for "All Books"
                     break;
             }
 
@@ -175,7 +293,6 @@ namespace BookHive.Controllers
                     query = query.OrderBy(b => b.Price);
                     break;
                 case "popularity":
-                    // Sort by most sold (based on Orders)
                     query = query
                         .GroupJoin(_context.Orders.Where(o => !o.IsCancelled),
                             b => b.Id,
@@ -232,30 +349,17 @@ namespace BookHive.Controllers
             ViewBag.Format = format;
             ViewBag.Publisher = publisher;
             ViewBag.ISBN = isbn;
+            ViewBag.IsComingSoon = isComingSoon;
 
             // Handle cart items for authenticated users
-            if (User.Identity.IsAuthenticated)
-            {
-                var user = await _userManager.GetUserAsync(User);
-                if (user != null)
-                {
-                    ViewBag.HasCartItems = await _context.Carts.AnyAsync(c => c.UserId == user.Id);
-                }
-                else
-                {
-                    ViewBag.HasCartItems = false;
-                }
-            }
-            else
-            {
-                ViewBag.HasCartItems = false;
-            }
+            var user = await GetCurrentUserAsync();
+            ViewBag.HasCartItems = await HasCartItemsAsync(user);
 
             return View(booksWithDiscounts);
         }
 
         // GET: Books/Details/{id}
-        [AllowAnonymous] // Allow unauthenticated users to view book details
+        [AllowAnonymous]
         public async Task<IActionResult> Details(int id)
         {
             var book = await _context.Books
@@ -271,7 +375,6 @@ namespace BookHive.Controllers
             var discount = await _context.TimedDiscounts
                 .FirstOrDefaultAsync(td => td.BookId == id && td.StartDate <= DateTime.UtcNow && td.ExpiresAt >= DateTime.UtcNow);
 
-            // Load reviews and their replies (only top-level reviews)
             var reviews = await _context.Reviews
                 .Where(r => r.BookId == id && r.ParentReviewId == null)
                 .Include(r => r.User)
@@ -288,15 +391,13 @@ namespace BookHive.Controllers
                 Reviews = reviews
             };
 
-            // Fetch recommendations
-            // Most rated books (top 3 by average rating)
             var mostRatedBooks = await _context.Books
                 .Select(b => new
                 {
                     Book = b,
                     AverageRating = b.Reviews.Any(r => r.ParentReviewId == null) ? b.Reviews.Where(r => r.ParentReviewId == null).Average(r => r.Rating) : 0
                 })
-                .Where(b => b.Book.Id != book.Id) // Exclude the current book
+                .Where(b => b.Book.Id != book.Id)
                 .OrderByDescending(b => b.AverageRating)
                 .Take(3)
                 .Select(b => new BookWithDiscountViewModel
@@ -308,7 +409,6 @@ namespace BookHive.Controllers
                 })
                 .ToListAsync();
 
-            // Most ordered books (top 3 by total quantity ordered)
             var mostOrderedBooks = await _context.Orders
                 .Where(o => !o.IsCancelled)
                 .GroupBy(o => o.BookId)
@@ -329,33 +429,16 @@ namespace BookHive.Controllers
                         IsDiscountActive = false,
                         DiscountedPrice = b.Price
                     })
-                .Where(b => b.Book.Id != book.Id) // Exclude the current book
+                .Where(b => b.Book.Id != book.Id)
                 .ToListAsync();
 
             ViewBag.MostRatedBooks = mostRatedBooks;
             ViewBag.MostOrderedBooks = mostOrderedBooks;
 
-            if (User.Identity.IsAuthenticated)
-            {
-                var user = await _userManager.GetUserAsync(User);
-                if (user != null)
-                {
-                    var hasPurchased = await _context.Orders
-                        .AnyAsync(o => o.UserId == user.Id && o.BookId == id && !o.IsCancelled);
-                    ViewBag.HasPurchased = hasPurchased;
-                    ViewBag.HasCartItems = await _context.Carts.AnyAsync(c => c.UserId == user.Id);
-                }
-                else
-                {
-                    ViewBag.HasPurchased = false;
-                    ViewBag.HasCartItems = false;
-                }
-            }
-            else
-            {
-                ViewBag.HasPurchased = false;
-                ViewBag.HasCartItems = false;
-            }
+            var user = await GetCurrentUserAsync();
+            ViewBag.HasPurchased = user != null && await _context.Orders
+                .AnyAsync(o => o.UserId == user.Id && o.BookId == id && !o.IsCancelled);
+            ViewBag.HasCartItems = await HasCartItemsAsync(user);
 
             return View(model);
         }
@@ -365,26 +448,20 @@ namespace BookHive.Controllers
         public async Task<IActionResult> GetBookStock(int bookId)
         {
             var book = await _context.Books.FindAsync(bookId);
-            if (book == null)
-            {
-                return Json(new { stock = 0 });
-            }
-
-            return Json(new { stock = book.Quantity });
+            return Json(new { stock = book?.Quantity ?? 0 });
         }
 
         // POST: Books/AddToCart/{id}
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize] // Require authentication
+        [Authorize]
         public async Task<IActionResult> AddToCart(int id, int quantity = 1)
         {
             _logger.LogInformation("Attempting to add book {BookId} to cart for current user", id);
 
-            var user = await _userManager.GetUserAsync(User);
+            var user = await GetCurrentUserAsync();
             if (user == null)
             {
-                _logger.LogWarning("User not found in AddToCart");
                 return Json(new { success = false, message = "User not found. Please log in." });
             }
 
@@ -447,17 +524,16 @@ namespace BookHive.Controllers
         // POST: Books/ToggleWishlist/{id}
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize] // Require authentication
+        [Authorize]
         public async Task<IActionResult> ToggleWishlist(int id)
         {
             try
             {
                 _logger.LogInformation("Attempting to toggle whitelist status for book {BookId} for current user", id);
 
-                var user = await _userManager.GetUserAsync(User);
+                var user = await GetCurrentUserAsync();
                 if (user == null)
                 {
-                    _logger.LogWarning("User not found in ToggleWishlist");
                     return Json(new { success = false, message = "User not found." });
                 }
 
@@ -492,16 +568,16 @@ namespace BookHive.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error toggling whitelist for book {BookId}", id);
-                return Json(new { success = false, message = "Server error: " + ex.Message });
+                HandleError("Error toggling whitelist for book", ex, id.ToString());
+                return Json(new { success = false, message = TempData["ErrorMessage"]?.ToString() });
             }
         }
 
         // GET: Books/IsInWishlist?bookId={id}
-        [Authorize] // Require authentication
+        [Authorize]
         public async Task<IActionResult> IsInWishlist(int bookId)
         {
-            var user = await _userManager.GetUserAsync(User);
+            var user = await GetCurrentUserAsync();
             if (user == null)
             {
                 return Json(new { inWishlist = false });
@@ -531,65 +607,51 @@ namespace BookHive.Controllers
             {
                 var book = new Book
                 {
-                    Title = model.Title ?? string.Empty,
-                    Author = model.Author ?? string.Empty,
-                    Description = model.Description ?? string.Empty,
-                    AddedDate = DateTime.UtcNow,
+                    Title = string.IsNullOrWhiteSpace(model.Title) ? "Untitled" : model.Title,
+                    Author = string.IsNullOrWhiteSpace(model.Author) ? "Unknown Author" : model.Author,
+                    Genre = model.Genre,
+                    Description = model.Description,
+                    ISBN = model.ISBN,
+                    Language = model.Language,
+                    Format = model.Format,
+                    Publisher = model.Publisher,
                     Price = model.Price,
-                    Quantity = model.Quantity
+                    Quantity = model.Quantity,
+                    IsPhysicalLibraryAccess = model.IsPhysicalLibraryAccess,
+                    IsBestseller = model.IsBestseller,
+                    IsAwardWinner = model.IsAwardWinner,
+                    IsComingSoon = model.IsComingSoon,
+                    AddedDate = DateTime.UtcNow,
+                    PublicationDate = (model.PublicationDate ?? DateTime.UtcNow).ToUniversalTime(),
+                    ReleaseDate = model.IsComingSoon && model.ReleaseDate.HasValue ? model.ReleaseDate.Value.ToUniversalTime() : null // Set to null if IsComingSoon is false
                 };
 
                 if (model.CoverImage != null && model.CoverImage.Length > 0)
                 {
                     var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "images/book-covers");
-                    if (!Directory.Exists(uploadsFolder))
-                    {
-                        try
-                        {
-                            Directory.CreateDirectory(uploadsFolder);
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, "Failed to create directory {UploadsFolder}", uploadsFolder);
-                            TempData["ErrorMessage"] = "Failed to create upload directory: " + ex.Message;
-                            return View(model);
-                        }
-                    }
+                    Directory.CreateDirectory(uploadsFolder);
 
                     var uniqueFileName = Guid.NewGuid().ToString() + "_" + Path.GetFileName(model.CoverImage.FileName);
                     var filePath = Path.Combine(uploadsFolder, uniqueFileName);
 
-                    try
+                    using (var fileStream = new FileStream(filePath, FileMode.Create))
                     {
-                        using (var fileStream = new FileStream(filePath, FileMode.Create))
-                        {
-                            await model.CoverImage.CopyToAsync(fileStream);
-                        }
-                        book.CoverImageUrl = "/images/book-covers/" + uniqueFileName;
+                        await model.CoverImage.CopyToAsync(fileStream);
                     }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Failed to save cover image for book {BookTitle}", model.Title);
-                        TempData["ErrorMessage"] = "Failed to save cover image: " + ex.Message;
-                        return View(model);
-                    }
+
+                    book.CoverImageUrl = "/images/book-covers/" + uniqueFileName;
                 }
 
-                _context.Add(book);
+                _context.Books.Add(book);
                 await _context.SaveChangesAsync();
+
                 TempData["SuccessMessage"] = $"Book '{book.Title}' created successfully.";
                 return RedirectToAction(nameof(Index));
             }
-            catch (DbUpdateException ex)
-            {
-                _logger.LogError(ex, "Database error while creating book {BookTitle}", model.Title);
-                TempData["ErrorMessage"] = "A database error occurred while creating the book: " + (ex.InnerException?.Message ?? ex.Message);
-                return View(model);
-            }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating book {BookTitle}", model.Title);
-                TempData["ErrorMessage"] = "An unexpected error occurred while creating the book: " + ex.Message;
+                _logger.LogError(ex, "Error creating book.");
+                TempData["ErrorMessage"] = "An unexpected error occurred while creating the book.";
                 return View(model);
             }
         }
@@ -615,17 +677,27 @@ namespace BookHive.Controllers
                 Id = book.Id,
                 Title = book.Title,
                 Author = book.Author,
+                Genre = book.Genre,
                 Description = book.Description,
-                CoverImageUrl = book.CoverImageUrl,
+                PublicationDate = book.PublicationDate,
                 Price = book.Price,
-                Quantity = book.Quantity
+                Quantity = book.Quantity,
+                CoverImageUrl = book.CoverImageUrl,
+                ISBN = book.ISBN,
+                Language = book.Language,
+                Format = book.Format,
+                Publisher = book.Publisher,
+                IsPhysicalLibraryAccess = book.IsPhysicalLibraryAccess,
+                IsBestseller = book.IsBestseller,
+                IsAwardWinner = book.IsAwardWinner,
+                IsComingSoon = book.IsComingSoon,
+                ReleaseDate = book.ReleaseDate
             };
 
             return View(model);
         }
 
         // POST: Books/Edit/{id}
-        [Authorize(Roles = "Admin")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, BookViewModel model)
@@ -633,6 +705,12 @@ namespace BookHive.Controllers
             if (id != model.Id)
             {
                 return NotFound();
+            }
+
+            // Allow model to be valid even if no new image is uploaded and an old one exists
+            if (model.CoverImage == null && !string.IsNullOrEmpty(model.CoverImageUrl))
+            {
+                ModelState.Remove(nameof(model.CoverImage));
             }
 
             if (!ModelState.IsValid)
@@ -649,21 +727,30 @@ namespace BookHive.Controllers
                     return NotFound();
                 }
 
-                var oldImagePath = book.CoverImageUrl;
-
-                book.Title = model.Title ?? book.Title;
-                book.Author = model.Author ?? book.Author;
-                book.Description = model.Description ?? book.Description;
+                // Update core fields with defaults for empty values
+                book.Title = string.IsNullOrWhiteSpace(model.Title) ? "Untitled" : model.Title?.Trim();
+                book.Author = string.IsNullOrWhiteSpace(model.Author) ? "Unknown Author" : model.Author?.Trim();
+                book.Genre = model.Genre?.Trim();
+                book.Description = model.Description?.Trim();
+                book.ISBN = model.ISBN?.Trim();
+                book.Language = model.Language?.Trim();
+                book.Format = model.Format?.Trim();
+                book.Publisher = model.Publisher?.Trim();
                 book.Price = model.Price;
                 book.Quantity = model.Quantity;
+                book.IsPhysicalLibraryAccess = model.IsPhysicalLibraryAccess;
+                book.IsBestseller = model.IsBestseller;
+                book.IsAwardWinner = model.IsAwardWinner;
+                book.IsComingSoon = model.IsComingSoon;
+                book.AddedDate = book.AddedDate; // Preserve original AddedDate
+                book.PublicationDate = (model.PublicationDate ?? DateTime.UtcNow).ToUniversalTime();
+                book.ReleaseDate = model.IsComingSoon && model.ReleaseDate.HasValue ? model.ReleaseDate.Value.ToUniversalTime() : null;
 
+                // Handle cover image upload
                 if (model.CoverImage != null && model.CoverImage.Length > 0)
                 {
                     var uploadsFolder = Path.Combine(_webHostEnvironment.WebRootPath, "images/book-covers");
-                    if (!Directory.Exists(uploadsFolder))
-                    {
-                        Directory.CreateDirectory(uploadsFolder);
-                    }
+                    Directory.CreateDirectory(uploadsFolder);
 
                     var uniqueFileName = Guid.NewGuid().ToString() + "_" + Path.GetFileName(model.CoverImage.FileName);
                     var filePath = Path.Combine(uploadsFolder, uniqueFileName);
@@ -673,20 +760,22 @@ namespace BookHive.Controllers
                         await model.CoverImage.CopyToAsync(fileStream);
                     }
 
-                    book.CoverImageUrl = "/images/book-covers/" + uniqueFileName;
-
-                    if (!string.IsNullOrEmpty(oldImagePath))
+                    // Delete old image if exists
+                    if (!string.IsNullOrEmpty(book.CoverImageUrl))
                     {
-                        var oldFilePath = Path.Combine(_webHostEnvironment.WebRootPath, oldImagePath.TrimStart('/'));
-                        if (System.IO.File.Exists(oldFilePath))
+                        var oldImagePath = Path.Combine(_webHostEnvironment.WebRootPath, book.CoverImageUrl.TrimStart('/'));
+                        if (System.IO.File.Exists(oldImagePath))
                         {
-                            System.IO.File.Delete(oldFilePath);
+                            System.IO.File.Delete(oldImagePath);
                         }
                     }
+
+                    book.CoverImageUrl = "/images/book-covers/" + uniqueFileName;
                 }
 
                 _context.Update(book);
                 await _context.SaveChangesAsync();
+
                 TempData["SuccessMessage"] = $"Book '{book.Title}' updated successfully.";
                 return RedirectToAction(nameof(Index));
             }
@@ -700,8 +789,8 @@ namespace BookHive.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error editing book {BookId}", id);
-                TempData["ErrorMessage"] = "An error occurred while editing the book: " + ex.Message;
+                _logger.LogError(ex, "Error updating book with ID {BookId}.", id);
+                TempData["ErrorMessage"] = "An error occurred while updating the book.";
                 return View(model);
             }
         }
@@ -734,30 +823,28 @@ namespace BookHive.Controllers
             try
             {
                 var book = await _context.Books.FindAsync(id);
-                if (book != null)
+                if (book == null)
                 {
-                    if (!string.IsNullOrEmpty(book.CoverImageUrl))
-                    {
-                        var filePath = Path.Combine(_webHostEnvironment.WebRootPath, book.CoverImageUrl.TrimStart('/'));
-                        if (System.IO.File.Exists(filePath))
-                        {
-                            System.IO.File.Delete(filePath);
-                        }
-                    }
+                    HandleError("Book not found");
+                    return RedirectToAction(nameof(Index));
+                }
 
-                    _context.Books.Remove(book);
-                    await _context.SaveChangesAsync();
-                    TempData["SuccessMessage"] = $"Book '{book.Title}' deleted successfully.";
-                }
-                else
+                if (!string.IsNullOrEmpty(book.CoverImageUrl))
                 {
-                    TempData["ErrorMessage"] = "Book not found.";
+                    var filePath = Path.Combine(_webHostEnvironment.WebRootPath, book.CoverImageUrl.TrimStart('/'));
+                    if (System.IO.File.Exists(filePath))
+                    {
+                        System.IO.File.Delete(filePath);
+                    }
                 }
+
+                _context.Books.Remove(book);
+                await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = $"Book '{book.Title}' deleted successfully.";
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error deleting book {BookId}", id);
-                TempData["ErrorMessage"] = "An error occurred while deleting the book: " + ex.Message;
+                HandleError("An error occurred while deleting the book", ex, id.ToString());
             }
 
             return RedirectToAction(nameof(Index));

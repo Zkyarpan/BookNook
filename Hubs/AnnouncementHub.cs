@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using System.Threading.Tasks;
 
-namespace BookHive.Hubs
+namespace BookNook.Hubs
 {
     public class AnnouncementHub : Hub
     {

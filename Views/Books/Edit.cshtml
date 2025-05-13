@@ -1,79 +1,221 @@
-﻿@model BookHive.Models.BookViewModel
-
+﻿@model BookNook.Models.BookViewModel
 @{
     ViewData["Title"] = "Edit Book";
+    Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<div class="container mx-auto px-4 py-6">
-    <h2 class="text-2xl font-bold text-center text-amber-900 mb-6">Edit Book</h2>
+<div class="container mx-auto px-4 py-8 max-w-4xl">
+    <!-- Page title -->
+    <h1 class="text-3xl font-merriweather text-[#4b2e83] text-center mb-8">
+        Edit Book Details
+    </h1>
 
+    <!-- Success / error banners -->
     @if (TempData["SuccessMessage"] != null)
     {
-        <div class="bg-green-100 text-green-700 p-2 rounded mb-4 text-center text-sm">
+        <div class="bg-green-100 text-green-700 p-4 rounded-lg mb-6 text-center">
             @TempData["SuccessMessage"]
         </div>
     }
-
     @if (TempData["ErrorMessage"] != null)
     {
-        <div class="bg-red-100 text-red-700 p-2 rounded mb-4 text-center text-sm">
+        <div class="bg-red-100 text-red-700 p-4 rounded-lg mb-6 text-center">
             @TempData["ErrorMessage"]
         </div>
     }
 
-    <div class="bg-amber-50 rounded-lg shadow-md p-6 max-w-lg mx-auto">
-        <form asp-action="Edit" method="post" enctype="multipart/form-data">
-            <input type="hidden" asp-for="Id" />
-            <input type="hidden" asp-for="CoverImageUrl" />
+    <!-- Card wrapper -->
+    <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+        <div class="p-8">
+            <form asp-action="Edit" asp-controller="Books" method="post" enctype="multipart/form-data">
+                <input type="hidden" asp-for="Id" />
 
-            <div class="mb-4">
-                <label asp-for="Title" class="block text-gray-700 text-sm font-semibold mb-2"></label>
-                <input asp-for="Title" class="w-full p-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
-                <span asp-validation-for="Title" class="text-red-600 text-sm"></span>
-            </div>
+                <!-- Validation summary -->
+                <div asp-validation-summary="ModelOnly"
+                     class="bg-red-50 border border-red-200 text-red-600 p-4 rounded-lg mb-8 text-sm">
+                </div>
 
-            <div class="mb-4">
-                <label asp-for="Author" class="block text-gray-700 text-sm font-semibold mb-2"></label>
-                <input asp-for="Author" class="w-full p-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
-                <span asp-validation-for="Author" class="text-red-600 text-sm"></span>
-            </div>
+                <!-- Book Details -->
+                <section class="mb-10">
+                    <h2 class="text-xl font-semibold text-amber-900 mb-4 border-b border-amber-200 pb-2">
+                        Book Details
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label asp-for="Title" class="block text-gray-700 mb-2">Title</label>
+                            <input asp-for="Title"
+                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                                   placeholder="Enter book title" />
+                            <span asp-validation-for="Title" class="text-red-600 text-sm"></span>
+                        </div>
+                        <div>
+                            <label asp-for="Author" class="block text-gray-700 mb-2">Author</label>
+                            <input asp-for="Author"
+                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                                   placeholder="Enter author name" />
+                            <span asp-validation-for="Author" class="text-red-600 text-sm"></span>
+                        </div>
+                        <div>
+                            <label asp-for="Genre" class="block text-gray-700 mb-2">Genre</label>
+                            <input asp-for="Genre"
+                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                                   placeholder="Enter genre (optional)" />
+                            <span asp-validation-for="Genre" class="text-red-600 text-sm"></span>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label asp-for="Description" class="block text-gray-700 mb-2">Description</label>
+                            <textarea asp-for="Description" rows="4"
+                                      class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                                      placeholder="Enter description (optional)"></textarea>
+                            <span asp-validation-for="Description" class="text-red-600 text-sm"></span>
+                        </div>
+                    </div>
+                </section>
 
-            <div class="mb-4">
-                <label asp-for="Description" class="block text-gray-700 text-sm font-semibold mb-2"></label>
-                <textarea asp-for="Description" class="w-full p-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" rows="5"></textarea>
-                <span asp-validation-for="Description" class="text-red-600 text-sm"></span>
-            </div>
+                <!-- Pricing & Stock -->
+                <section class="mb-10">
+                    <h2 class="text-xl font-semibold text-amber-900 mb-4 border-b border-amber-200 pb-2">
+                        Pricing & Stock
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label asp-for="Price" class="block text-gray-700 mb-2">Price</label>
+                            <input asp-for="Price" type="number" step="0.01"
+                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                                   placeholder="e.g. 10.99" />
+                            <span asp-validation-for="Price" class="text-red-600 text-sm"></span>
+                        </div>
+                        <div>
+                            <label asp-for="Quantity" class="block text-gray-700 mb-2">Quantity</label>
+                            <input asp-for="Quantity" type="number"
+                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                                   placeholder="e.g. 5" />
+                            <span asp-validation-for="Quantity" class="text-red-600 text-sm"></span>
+                        </div>
+                    </div>
+                </section>
 
-            <div class="mb-4">
-                <label asp-for="Price" class="block text-gray-700 text-sm font-semibold mb-2"></label>
-                <input asp-for="Price" type="number" step="0.01" class="w-full p-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
-                <span asp-validation-for="Price" class="text-red-600 text-sm"></span>
-            </div>
+                <!-- Media -->
+                <section class="mb-10">
+                    <h2 class="text-xl font-semibold text-amber-900 mb-4 border-b border-amber-200 pb-2">
+                        Cover Image
+                    </h2>
+                    @if (!string.IsNullOrEmpty(Model.CoverImageUrl))
+                    {
+                        <div class="mb-6">
+                            <label class="block text-gray-700 mb-2">Current Image</label>
+                            <img src="@Model.CoverImageUrl"
+                                 alt="Cover"
+                                 class="w-32 h-48 object-cover rounded-lg shadow-sm" />
+                        </div>
+                    }
+                    <div>
+                        <label asp-for="CoverImage" class="block text-gray-700 mb-2">Upload New Image</label>
+                        <input asp-for="CoverImage" type="file"
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500" />
+                        <span asp-validation-for="CoverImage" class="text-red-600 text-sm"></span>
+                    </div>
+                </section>
 
-            <div class="mb-4">
-                <label asp-for="Quantity" class="block text-gray-700 text-sm font-semibold mb-2"></label>
-                <input asp-for="Quantity" type="number" class="w-full p-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
-                <span asp-validation-for="Quantity" class="text-red-600 text-sm"></span>
-            </div>
+                <!-- Metadata -->
+                <section class="mb-10">
+                    <h2 class="text-xl font-semibold text-amber-900 mb-4 border-b border-amber-200 pb-2">
+                        Metadata
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label asp-for="ISBN" class="block text-gray-700 mb-2">ISBN</label>
+                            <input asp-for="ISBN"
+                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                                   placeholder="e.g. 978-3-16-148410-0" />
+                            <span asp-validation-for="ISBN" class="text-red-600 text-sm"></span>
+                        </div>
+                        <div>
+                            <label asp-for="Language" class="block text-gray-700 mb-2">Language</label>
+                            <input asp-for="Language"
+                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                                   placeholder="e.g. English" />
+                            <span asp-validation-for="Language" class="text-red-600 text-sm"></span>
+                        </div>
+                        <div>
+                            <label asp-for="Format" class="block text-gray-700 mb-2">Format</label>
+                            <select asp-for="Format"
+                                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500">
+                                <option value="">Select (optional)</option>
+                                <option value="paperback">Paperback</option>
+                                <option value="hardcover">Hardcover</option>
+                                <option value="signed">Signed</option>
+                                <option value="limited">Limited</option>
+                                <option value="first">First Ed.</option>
+                                <option value="collectors">Collector’s</option>
+                                <option value="authors">Author’s</option>
+                                <option value="deluxe">Deluxe</option>
+                            </select>
+                            <span asp-validation-for="Format" class="text-red-600 text-sm"></span>
+                        </div>
+                        <div>
+                            <label asp-for="Publisher" class="block text-gray-700 mb-2">Publisher</label>
+                            <input asp-for="Publisher"
+                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500"
+                                   placeholder="Enter publisher" />
+                            <span asp-validation-for="Publisher" class="text-red-600 text-sm"></span>
+                        </div>
+                    </div>
+                </section>
 
-            <div class="mb-4">
-                <label asp-for="CoverImage" class="block text-gray-700 text-sm font-semibold mb-2">Cover Image</label>
-                @if (!string.IsNullOrEmpty(Model.CoverImageUrl))
-                {
-                    <img src="@Model.CoverImageUrl" alt="Current Cover" class="w-32 h-32 object-cover rounded mb-2" />
-                }
-                <input asp-for="CoverImage" type="file" class="w-full p-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
-                <span asp-validation-for="CoverImage" class="text-red-600 text-sm"></span>
-            </div>
+                <!-- Attributes -->
+                <section class="mb-10">
+                    <h2 class="text-xl font-semibold text-amber-900 mb-4 border-b border-amber-200 pb-2">
+                        Attributes
+                    </h2>
+                    <div class="flex flex-wrap gap-6">
+                        <label class="flex items-center space-x-2">
+                            <input asp-for="IsPhysicalLibraryAccess" type="checkbox" class="h-5 w-5 text-amber-600" />
+                            <span class="text-gray-700">Physical Library Access</span>
+                        </label>
+                        <label class="flex items-center space-x-2">
+                            <input asp-for="IsBestseller" type="checkbox" class="h-5 w-5 text-amber-600" />
+                            <span class="text-gray-700">Bestseller</span>
+                        </label>
+                        <label class="flex items-center space-x-2">
+                            <input asp-for="IsAwardWinner" type="checkbox" class="h-5 w-5 text-amber-600" />
+                            <span class="text-gray-700">Award Winner</span>
+                        </label>
+                        <label class="flex items-center space-x-2">
+                            <input asp-for="IsComingSoon" type="checkbox" class="h-5 w-5 text-amber-600" id="IsComingSoon" />
+                            <span class="text-gray-700">Coming Soon</span>
+                        </label>
+                        <div id="releaseDateWrapper" class="mt-4 w-full @(Model.IsComingSoon ? "" : "hidden")">
+                            <label for="ReleaseDate" class="block text-gray-700 mb-2">Expected Release Date</label>
+                            <input type="date" id="ReleaseDate" name="ReleaseDate"
+                                   value="@(Model.ReleaseDate?.ToString("yyyy-MM-dd") ?? "")"
+                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500" />
+                        </div>
+                    </div>
+                </section>
 
-            <div class="text-center">
-                <button type="submit" class="inline-block bg-amber-600 text-white font-medium text-sm py-1.5 px-3 rounded hover:bg-amber-700">Save Changes</button>
-                <a asp-action="Index" class="inline-block bg-gray-500 text-white font-medium text-sm py-1.5 px-3 rounded hover:bg-gray-600 ml-2">Cancel</a>
-            </div>
-        </form>
+                <!-- Actions -->
+                <div class="flex justify-end space-x-4">
+                    <a asp-action="Index" asp-controller="Books"
+                       class="bg-gray-500 text-white py-2 px-6 rounded-lg hover:bg-gray-600 transition">
+                        Cancel
+                    </a>
+                    <button type="submit"
+                            class="bg-amber-600 text-white py-2 px-6 rounded-lg hover:bg-amber-700 transition">
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        const chk = document.getElementById('IsComingSoon');
+        const wrapper = document.getElementById('releaseDateWrapper');
+        chk.addEventListener('change', () => wrapper.classList.toggle('hidden', !chk.checked));
+        if (chk.checked) wrapper.classList.remove('hidden');
+    </script>
 }

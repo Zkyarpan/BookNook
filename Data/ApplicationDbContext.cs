@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using BookHive.Models;
+using BookNook.Models;
 
-namespace BookHive.Data
+namespace BookNook.Data
 {
     public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {

@@ -1,162 +1,135 @@
-﻿@model IEnumerable<BookHive.Models.ApplicationUser>
+﻿@model IEnumerable<BookNook.Models.ApplicationUser>
 @using Microsoft.AspNetCore.Identity
-@inject UserManager<BookHive.Models.ApplicationUser> UserManager
+@inject UserManager<BookNook.Models.ApplicationUser> UserManager
 
 @{
     ViewData["Title"] = "Admin Dashboard";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<style>
-    /* container scroll box */
-    .user-list {
-        max-height: 500px;
-        overflow-y: auto;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        padding: 10px;
-    }
+<div class="flex flex-col md:flex-row min-h-screen bg-gray-50">
+    <!-- Sidebar -->
+    <aside class="w-full md:w-1/4 lg:w-1/5 bg-white shadow-lg p-6">
+        <h2 class="text-xl font-merriweather text-[#4b2e83] mb-6">Admin Menu</h2>
+        <nav class="space-y-2">
+            <a asp-action="Index" class="block px-4 py-2 rounded hover:bg-[#4b2e83] hover:text-white transition">Dashboard</a>
+            <a asp-controller="Books" asp-action="Index" class="block px-4 py-2 rounded hover:bg-[#4b2e83] hover:text-white transition">Manage Books</a>
+            <a asp-controller="Announcements" asp-action="Index" class="block px-4 py-2 rounded hover:bg-[#4b2e83] hover:text-white transition">Announcements</a>
+            <a asp-controller="Staff" asp-action="FulfillOrder" class="block px-4 py-2 rounded hover:bg-[#4b2e83] hover:text-white transition">Orders</a>
+        </nav>
+    </aside>
 
-    .user-item {
-        display: flex;
-        align-items: center;
-        padding: 10px;
-        border-bottom: 1px solid #e2e8f0;
-    }
+    <!-- Main content -->
+    <main class="flex-1 p-6">
+        <h1 class="text-2xl font-merriweather text-[#4b2e83] mb-6">Admin Dashboard</h1>
 
-        .user-item:last-child {
-            border-bottom: none;
-        }
-
-        /* avatar */
-        .user-item img {
-            width: 40px;
-            height: 40px;
-            object-fit: cover;
-            border-radius: 50%;
-            margin-right: 10px;
-        }
-
-    .no-image {
-        width: 40px;
-        height: 40px;
-        background: #e2e8f0;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 10px;
-        font-size: 12px;
-        color: #475569;
-    }
-
-    /* filter buttons */
-    .filter-buttons {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 20px;
-        flex-wrap: wrap;
-    }
-
-    .filter-button {
-        padding: 8px 16px;
-        background: #4b2e83;
-        color: white;
-        border-radius: 6px;
-        font-weight: 500;
-        transition: background .2s;
-    }
-
-        .filter-button:hover {
-            background: #3c226a;
-        }
-
-        .filter-button.active {
-            background: #3c226a;
-        }
-</style>
-
-<div class="max-w-6xl mx-auto px-4 py-10">
-    <h1 class="text-2xl font-merriweather text-[#4b2e83] text-center mb-8">
-        Admin Dashboard
-    </h1>
-
-    <!-- flash messages -->
-    @if (TempData["SuccessMessage"] != null)
-    {
-        <div class="bg-emerald-100 text-emerald-700 py-3 px-4 rounded-lg mb-6 text-center shadow">
-            @TempData["SuccessMessage"]
-        </div>
-    }
-    @if (TempData["ErrorMessage"] != null)
-    {
-        <div class="bg-rose-100 text-rose-700 py-3 px-4 rounded-lg mb-6 text-center shadow">
-            @TempData["ErrorMessage"]
-        </div>
-    }
-
-    <!-- Manage Users ------------------------------------------------------>
-    <h2 class="text-xl font-semibold text-[#4b2e83] mb-4">Manage Users</h2>
-
-    <!-- Filters -->
-    <div class="filter-buttons">
-        <button class="filter-button active" onclick="filterUsers('all')">All Users</button>
-        <button class="filter-button" onclick="filterUsers('Admin')">Admins</button>
-        <button class="filter-button" onclick="filterUsers('Staff')">Staff</button>
-        <button class="filter-button" onclick="filterUsers('Member')">Members</button>
-    </div>
-
-    <!-- User list -->
-    <div class="user-list bg-white/90 backdrop-blur">
-        @foreach (var user in Model)
+        @* Flash messages *@
+        @if (TempData["SuccessMessage"] is string success)
         {
-            var roles = await UserManager.GetRolesAsync(user);
-            var roleClass = roles.Any() ? string.Join(" ", roles) : "NoRole";
-            <div class="user-item @roleClass" data-roles="@roleClass">
-                @if (!string.IsNullOrEmpty(user.ProfileImageUrl))
-                {
-                    <img src="@user.ProfileImageUrl" alt="@user.UserName" />
-                }
-                else
-                {
-                    <div class="no-image"><span>Img</span></div>
-                }
-
-                <div class="flex-grow">
-                    <h4 class="text-sm font-semibold text-[#4b2e83]">@user.UserName</h4>
-                    <p class="text-xs text-slate-600">Email: @user.Email</p>
-                    <p class="text-xs text-slate-600">Roles: @(roles.Any() ? string.Join(", ", roles) : "None")</p>
-                </div>
-
-                <div class="flex gap-2 shrink-0">
-                    <a asp-action="ViewProfile" asp-route-id="@user.Id"
-                       class="bg-[#4b2e83] hover:bg-[#3c226a] text-white text-xs font-semibold py-1 px-3 rounded-lg shadow">
-                        View
-                    </a>
-                    <a asp-action="SendDeletionNotice" asp-route-id="@user.Id"
-                       class="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold py-1 px-3 rounded-lg shadow">
-                        Notice
-                    </a>
-                </div>
-            </div>
+            <div class="bg-green-100 text-green-800 p-3 rounded mb-4 shadow">@success</div>
         }
-    </div>
+        @if (TempData["ErrorMessage"] is string error)
+        {
+            <div class="bg-red-100 text-red-800 p-3 rounded mb-4 shadow">@error</div>
+        }
+
+        <!-- Metrics cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            @{
+                var users = Model.ToList();
+                var total = users.Count;
+                var admins = users.Count(u => (UserManager.GetRolesAsync(u).Result).Contains("Admin"));
+                var staff = users.Count(u => (UserManager.GetRolesAsync(u).Result).Contains("Staff"));
+                var members = total - admins - staff;
+            }
+            <div class="bg-white p-4 rounded-lg shadow">
+                <p class="text-sm text-gray-500">Total Users</p>
+                <p class="text-2xl font-bold text-[#4b2e83]">@total</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow">
+                <p class="text-sm text-gray-500">Admins</p>
+                <p class="text-2xl font-bold text-[#4b2e83]">@admins</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow">
+                <p class="text-sm text-gray-500">Staff</p>
+                <p class="text-2xl font-bold text-[#4b2e83]">@staff</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow">
+                <p class="text-sm text-gray-500">Members</p>
+                <p class="text-2xl font-bold text-[#4b2e83]">@members</p>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="flex flex-wrap gap-2 mb-4">
+            <button class="filter-button active px-4 py-1 rounded bg-[#4b2e83] text-white" data-role="all">All</button>
+            <button class="filter-button px-4 py-1 rounded bg-gray-200 hover:bg-[#4b2e83] hover:text-white" data-role="Admin">Admins</button>
+            <button class="filter-button px-4 py-1 rounded bg-gray-200 hover:bg-[#4b2e83] hover:text-white" data-role="Staff">Staff</button>
+            <button class="filter-button px-4 py-1 rounded bg-gray-200 hover:bg-[#4b2e83] hover:text-white" data-role="Member">Members</button>
+        </div>
+
+        <!-- User table -->
+        <div class="overflow-x-auto bg-white rounded-lg shadow">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">User</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">Email</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">Roles</th>
+                        <th class="px-6 py-3"></th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    @foreach (var user in users)
+                    {
+                        var roles = UserManager.GetRolesAsync(user).Result;
+                        var roleList = roles.Any() ? string.Join(", ", roles) : "Member";
+                        <tr data-roles="@string.Join(" ", roles.DefaultIfEmpty("Member"))">
+                            <td class="px-6 py-4 flex items-center space-x-3">
+                                @if (!string.IsNullOrEmpty(user.ProfileImageUrl))
+                                {
+                                    <img src="@user.ProfileImageUrl" class="h-8 w-8 rounded-full" />
+                                }
+                                else
+                                {
+                                    <div class="h-8 w-8 bg-gray-300 rounded-full flex items-center justify-center text-gray-600">?</div>
+                                }
+                                <span class="text-sm font-medium text-gray-800">@user.UserName</span>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-600">@user.Email</td>
+                            <td class="px-6 py-4 text-sm text-gray-600">@roleList</td>
+                            <td class="px-6 py-4 text-right space-x-2">
+                                <a asp-action="ViewProfile" asp-route-id="@user.Id"
+                                   class="text-xs bg-[#4b2e83] text-white px-2 py-1 rounded hover:bg-[#3c226a]">View</a>
+                                <a asp-action="SendDeletionNotice" asp-route-id="@user.Id"
+                                   class="text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">Notice</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </main>
 </div>
 
 @section Scripts {
     <script>
-        function filterUsers(role){
-            document.querySelectorAll('.filter-button').forEach(b=>b.classList.remove('active'));
-            document.querySelector(`button[onclick="filterUsers('${role}')"]`).classList.add('active');
+        document.querySelectorAll('.filter-button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Active state
+                document.querySelectorAll('.filter-button').forEach(b => {
+                    b.classList.remove('bg-[#4b2e83]', 'text-white');
+                    b.classList.add('bg-gray-200');
+                });
+                btn.classList.add('bg-[#4b2e83]', 'text-white');
 
-            document.querySelectorAll('.user-item').forEach(item=>{
-                if(role==='all'){ item.style.display='flex'; }
-                else{
-                    const roles=item.getAttribute('data-roles').split(' ');
-                    item.style.display=roles.includes(role)?'flex':'none';
-                }
+                // Filter rows
+                const role = btn.getAttribute('data-role');
+                document.querySelectorAll('tbody tr').forEach(row => {
+                    const roles = row.getAttribute('data-roles').split(' ');
+                    row.style.display = (role === 'all' || roles.includes(role)) ? '' : 'none';
+                });
             });
-        }
-        filterUsers('all');
+        });
     </script>
 }

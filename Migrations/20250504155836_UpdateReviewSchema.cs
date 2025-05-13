@@ -3,7 +3,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace BookHive.Migrations
+namespace BookNook.Migrations
 {
     /// <inheritdoc />
     public partial class UpdateReviewSchema : Migration

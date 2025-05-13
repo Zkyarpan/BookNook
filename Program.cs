@@ -1,11 +1,11 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Identity;
-using BookHive.Data;
-using BookHive.Models;
+using BookNook.Data;
+using BookNook.Models;
 using System.Net.Mail;
 using System.Net;
-using BookHive.Hubs;
+using BookNook.Hubs;
 using Microsoft.Extensions.Logging;
 
 var builder = WebApplication.CreateBuilder(args);

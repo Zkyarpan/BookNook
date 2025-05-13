@@ -1,58 +1,92 @@
-﻿@model BookHive.Models.ApplicationUser
+﻿@using BookNook.Models
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+@model ApplicationUser
+
 @{
     ViewData["Title"] = "View User Profile";
     Layout = "~/Views/Shared/_Layout.cshtml";
+    var roles = (ViewBag.Roles as IList<string>) ?? new List<string>();
+    bool isAdmin = User.IsInRole("Admin");
+    string? pendingDeletionId = TempData["PendingDeletionUserId"] as string;
 }
 
-<!-- wrapper ------------------------------------------------------------->
-<div class="max-w-4xl mx-auto px-4 py-12">
+<div class="min-h-screen bg-gray-50 py-12">
+    <div class="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-8">
+        <h1 class="text-3xl font-merriweather text-[#4b2e83] text-center mb-8">
+            Profile: <span class="font-bold">@Model.UserName</span>
+        </h1>
 
-    <h1 class="text-2xl font-merriweather text-[#4b2e83] text-center mb-8">
-        User Profile: @Model.UserName
-    </h1>
-
-    <!-- card ------------------------------------------------------------>
-    <div class="bg-white/90 backdrop-blur border border-slate-200 rounded-2xl shadow-lg p-8 max-w-lg mx-auto">
-
-        <!-- avatar -->
-        <div class="text-center mb-6">
+        <div class="flex flex-col items-center space-y-6">
             @if (!string.IsNullOrEmpty(Model.ProfileImageUrl))
             {
                 <img src="@Model.ProfileImageUrl" alt="@Model.UserName"
-                     class="w-32 h-32 object-cover rounded-full mx-auto">
+                     class="w-32 h-32 object-cover rounded-full border-4 border-[#fbbf24] shadow-md" />
             }
             else
             {
-                <div class="w-32 h-32 bg-slate-200 flex items-center justify-center rounded-full mx-auto text-xs text-slate-600">
-                    No Image
+                <div class="w-32 h-32 bg-slate-200 flex items-center justify-center rounded-full text-xl text-slate-600">
+                    No Image
                 </div>
             }
-        </div>
 
-        <!-- details -->
-        <dl class="grid grid-cols-1 gap-4 text-sm">
-            <dt class="font-semibold text-slate-700">Username</dt>
-            <dd class="text-slate-600">@Model.UserName</dd>
+            <dl class="w-full grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-700">
+                <div>
+                    <dt class="font-semibold">Username</dt>
+                    <dd class="mt-1">@Model.UserName</dd>
+                </div>
+                <div>
+                    <dt class="font-semibold">Email</dt>
+                    <dd class="mt-1">@Model.Email</dd>
+                </div>
+                <div>
+                    <dt class="font-semibold">First Name</dt>
+                    <dd class="mt-1">@(!string.IsNullOrWhiteSpace(Model.FirstName) ? Model.FirstName : "—")</dd>
+                </div>
+                <div>
+                    <dt class="font-semibold">Last Name</dt>
+                    <dd class="mt-1">@(!string.IsNullOrWhiteSpace(Model.LastName) ? Model.LastName : "—")</dd>
+                </div>
+                <div class="sm:col-span-2">
+                    <dt class="font-semibold">Roles</dt>
+                    <dd class="mt-1">@((roles.Any() ? string.Join(", ", roles) : "None"))</dd>
+                </div>
+            </dl>
 
-            <dt class="font-semibold text-slate-700">Email</dt>
-            <dd class="text-slate-600">@Model.Email</dd>
+            @* Admin Actions *@
+            @if (isAdmin)
+            {
+                <div class="w-full mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    @* Send or cancel deletion notice *@
+                    @if (pendingDeletionId != Model.Id)
+                    {
+                        <a asp-controller="Admin" asp-action="SendDeletionNotice" asp-route-id="@Model.Id"
+                           class="block text-center bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg transition">
+                            Send Deletion Notice
+                        </a>
+                    }
+                    else
+                    {
+                        <a asp-controller="Admin" asp-action="CancelDeletion" asp-route-id="@Model.Id"
+                           class="block text-center bg-yellow-600 hover:bg-yellow-700 text-white py-2 rounded-lg transition">
+                            Cancel Deletion Notice
+                        </a>
+                    }
 
-            <dt class="font-semibold text-slate-700">First Name</dt>
-            <dd class="text-slate-600">@(Model.FirstName ?? "Not set")</dd>
+                    @* Confirm & delete user *@
+                    <a asp-controller="Admin" asp-action="ConfirmDeletion" asp-route-id="@Model.Id"
+                       class="block text-center bg-gray-500 hover:bg-gray-600 text-white py-2 rounded-lg transition">
+                        Delete User
+                    </a>
+                </div>
+            }
 
-            <dt class="font-semibold text-slate-700">Last Name</dt>
-            <dd class="text-slate-600">@(Model.LastName ?? "Not set")</dd>
-
-            <dt class="font-semibold text-slate-700">Roles</dt>
-            <dd class="text-slate-600">@(string.Join(", ", ViewBag.Roles))</dd>
-        </dl>
-
-        <!-- back button -->
-        <div class="mt-8 text-center">
-            <a asp-action="Index"
-               class="bg-slate-500 hover:bg-slate-600 text-white text-sm font-semibold py-2 px-6 rounded-lg shadow">
-                ← Back to Dashboard
-            </a>
+            <div class="w-full flex justify-center space-x-4 mt-6">
+                <a asp-action="Index"
+                   class="px-6 py-2 border border-slate-300 hover:border-slate-400 text-slate-700 rounded-lg transition">
+                    ← Back to Dashboard
+                </a>
+            </div>
         </div>
     </div>
 </div>

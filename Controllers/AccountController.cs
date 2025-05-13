@@ -1,14 +1,14 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using BookHive.Models;
+using BookNook.Models;
 using System.Text.Encodings.Web;
 using System.Net.Mail;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 
-namespace BookHive.Controllers
+namespace BookNook.Controllers
 {
     public class AccountController : Controller
     {
@@ -70,8 +70,8 @@ namespace BookHive.Controllers
 
                 await SendEmailAsync(
                     model.Email,
-                    "Verify Your BookHive Staff Account",
-                    $"<p>Welcome to BookHive! Please verify your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.</p>" +
+                    "Verify Your BookNook Staff Account",
+                    $"<p>Welcome to BookNook! Please verify your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.</p>" +
                     $"<p>Your temporary password is: {model.TemporaryPassword}</p>" +
                     "<p>Please change your password after logging in.</p>");
 
@@ -136,7 +136,7 @@ namespace BookHive.Controllers
 
                 await SendEmailAsync(
                     model.Email,
-                    "Confirm your BookHive account",
+                    "Confirm your BookNook account",
                     $"<p>Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.</p>");
 
                 return RedirectToAction("RegisterConfirmation");

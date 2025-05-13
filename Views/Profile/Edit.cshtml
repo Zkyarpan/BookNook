@@ -1,59 +1,94 @@
-﻿@model BookHive.Models.ProfileViewModel
+﻿@model BookNook.Models.ProfileViewModel
 
 @{
     ViewData["Title"] = "Edit Profile";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<div class="container mx-auto px-4 py-6">
-    <h2 class="text-2xl font-bold text-amber-900 mb-6 text-center">Edit Profile</h2>
+<div class="flex items-center justify-center min-h-[calc(100vh-160px)] bg-gradient-to-br from-[#4b2e83]/10 via-[#fbbf24]/10 to-white py-8 px-4">
+    <div class="bg-white/90 backdrop-blur-lg border border-gray-200 rounded-2xl shadow-lg p-8 max-w-lg w-full">
 
-    <div class="bg-amber-50 rounded-lg shadow-md p-6 max-w-lg mx-auto">
+        <h2 class="text-3xl font-merriweather text-[#4b2e83] text-center mb-6">
+            Edit Your Profile
+        </h2>
+
         <form asp-action="Edit" method="post" enctype="multipart/form-data" class="space-y-6">
+            <div asp-validation-summary="All" class="text-red-600 text-sm"></div>
+
             <div>
-                <label asp-for="UserName" class="block text-sm font-semibold text-gray-700 mb-1">Username</label>
-                <input asp-for="UserName" class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500" required />
-                <span asp-validation-for="UserName" class="text-red-600 text-sm"></span>
+                <label asp-for="UserName" class="block text-gray-700 font-medium mb-1">
+                    Username
+                </label>
+                <input asp-for="UserName"
+                       class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fbbf24]" />
+                <span asp-validation-for="UserName" class="text-red-600 text-xs"></span>
             </div>
+
             <div>
-                <label asp-for="Email" class="block text-sm font-semibold text-gray-700 mb-1">Email</label>
-                <input asp-for="Email" class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500" required />
-                <span asp-validation-for="Email" class="text-red-600 text-sm"></span>
+                <label asp-for="Email" class="block text-gray-700 font-medium mb-1">
+                    Email
+                </label>
+                <input asp-for="Email"
+                       class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fbbf24]" />
+                <span asp-validation-for="Email" class="text-red-600 text-xs"></span>
             </div>
+
             <div>
-                <label asp-for="FirstName" class="block text-sm font-semibold text-gray-700 mb-1">First Name</label>
-                <input asp-for="FirstName" class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500" />
-                <span asp-validation-for="FirstName" class="text-red-600 text-sm"></span>
+                <label asp-for="FirstName" class="block text-gray-700 font-medium mb-1">
+                    First Name
+                </label>
+                <input asp-for="FirstName"
+                       class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fbbf24]" />
+                <span asp-validation-for="FirstName" class="text-red-600 text-xs"></span>
             </div>
+
             <div>
-                <label asp-for="LastName" class="block text-sm font-semibold text-gray-700 mb-1">Last Name</label>
-                <input asp-for="LastName" class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500" />
-                <span asp-validation-for="LastName" class="text-red-600 text-sm"></span>
+                <label asp-for="LastName" class="block text-gray-700 font-medium mb-1">
+                    Last Name
+                </label>
+                <input asp-for="LastName"
+                       class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fbbf24]" />
+                <span asp-validation-for="LastName" class="text-red-600 text-xs"></span>
             </div>
+
             <div>
-                <label asp-for="ProfileImage" class="block text-sm font-semibold text-gray-700 mb-1">Profile Image</label>
-                <input asp-for="ProfileImage" type="file" accept="image/*" class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500" />
-                <span asp-validation-for="ProfileImage" class="text-red-600 text-sm"></span>
-                <p class="text-sm text-gray-600 mt-1">Supported formats: JPG, PNG. Max size: 5MB.</p>
+                <label asp-for="ProfileImage" class="block text-gray-700 font-medium mb-1">
+                    Upload New Profile Picture
+                </label>
+                <input asp-for="ProfileImage" type="file" accept="image/*"
+                       class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fbbf24]" />
+                <span asp-validation-for="ProfileImage" class="text-red-600 text-xs"></span>
+                <p class="text-gray-500 text-xs mt-1">Max size: 5MB. JPG/PNG only.</p>
             </div>
-            <div class="mt-4">
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Current Profile Image</label>
+
+            @* Show current picture if exists *@
+            <div>
+                <label class="block text-gray-700 font-medium mb-1">
+                    Current Profile Picture
+                </label>
                 @if (!string.IsNullOrEmpty(Model.ProfileImageUrl))
                 {
-                    <div class="text-center">
-                        <img src="@Model.ProfileImageUrl" alt="Profile Image" class="w-32 h-32 object-cover rounded-full mx-auto" />
-                    </div>
+                    <img src="@Model.ProfileImageUrl"
+                         alt="Current Picture"
+                         class="w-24 h-24 rounded-full object-cover border" />
                 }
                 else
                 {
-                    <div class="text-center p-4 bg-gray-200 rounded-lg">
-                        <p class="text-gray-600">No profile image available.</p>
+                    <div class="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center text-gray-500">
+                        No Image
                     </div>
                 }
             </div>
-            <div class="flex justify-end gap-3">
-                <a asp-action="ViewProfile" class="inline-block bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-600">Cancel</a>
-                <button type="submit" class="inline-block bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-amber-700">Save Changes</button>
+
+            <div class="flex justify-end gap-3 mt-4">
+                <a asp-action="ViewProfile"
+                   class="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-lg transition">
+                    Cancel
+                </a>
+                <button type="submit"
+                        class="bg-[#fbbf24] hover:bg-[#f9c851] text-[#4b2e83] font-semibold py-2 px-4 rounded-lg transition">
+                    Save Changes
+                </button>
             </div>
         </form>
     </div>

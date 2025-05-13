@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace BookHive.Migrations
+namespace BookNook.Migrations
 {
     /// <inheritdoc />
     public partial class UpdateApplicationUser : Migration

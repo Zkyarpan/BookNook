@@ -1,82 +1,65 @@
-﻿@model BookHive.Models.TimedAnnouncement
+﻿@model IEnumerable<BookNook.Models.TimedAnnouncement>
+
 @{
-    ViewData["Title"] = "Edit Announcement";
+    ViewData["Title"] = "Announcements";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<div class="max-w-4xl mx-auto px-4 py-12">
+<section class="bg-gradient-to-br from-[#4b2e83]/10 via-[#fbbf24]/10 to-white py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 class="text-3xl font-merriweather text-[#4b2e83] text-center mb-8">Announcements</h2>
 
-    <h1 class="text-2xl font-merriweather text-[#4b2e83] text-center mb-8">
-        Edit Announcement
-    </h1>
-
-    <!-- flash messages -->
-    @if (TempData["SuccessMessage"] != null)
-    {
-        <div class="bg-emerald-100 text-emerald-700 py-2 px-4 rounded mb-6 text-center text-sm shadow">
-            @TempData["SuccessMessage"]
-        </div>
-    }
-    @if (TempData["ErrorMessage"] != null)
-    {
-        <div class="bg-rose-100 text-rose-700 py-2 px-4 rounded mb-6 text-center text-sm shadow">
-            @TempData["ErrorMessage"]
-        </div>
-    }
-
-    <!-- form card -->
-    <div class="bg-white/90 backdrop-blur border border-slate-200 rounded-2xl shadow-lg p-8 max-w-lg mx-auto">
-
-        <form asp-action="Edit" method="post" class="space-y-6">
-            <input type="hidden" asp-for="Id" />
-
-            <!-- Title -->
-            <div>
-                <label asp-for="Title" class="block text-sm font-medium text-slate-700 mb-1">Title</label>
-                <input asp-for="Title"
-                       class="w-full p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fbbf24] text-sm" />
-                <span asp-validation-for="Title" class="text-rose-600 text-xs"></span>
+        @if (TempData["SuccessMessage"] is string msg)
+        {
+            <div class="bg-green-100 text-green-800 p-3 rounded-lg mb-6 text-center font-medium">
+                @msg
             </div>
+        }
 
-            <!-- Message -->
-            <div>
-                <label asp-for="Message" class="block text-sm font-medium text-slate-700 mb-1">Message</label>
-                <textarea asp-for="Message" rows="5"
-                          class="w-full p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fbbf24] text-sm"></textarea>
-                <span asp-validation-for="Message" class="text-rose-600 text-xs"></span>
-            </div>
-
-            <!-- Start -->
-            <div>
-                <label asp-for="StartDate" class="block text-sm font-medium text-slate-700 mb-1">Start Date (UTC)</label>
-                <input asp-for="StartDate" type="datetime-local"
-                       class="w-full p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fbbf24] text-sm" />
-                <span asp-validation-for="StartDate" class="text-rose-600 text-xs"></span>
-            </div>
-
-            <!-- Expires -->
-            <div>
-                <label asp-for="ExpiresAt" class="block text-sm font-medium text-slate-700 mb-1">Expires At (UTC)</label>
-                <input asp-for="ExpiresAt" type="datetime-local"
-                       class="w-full p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fbbf24] text-sm" />
-                <span asp-validation-for="ExpiresAt" class="text-rose-600 text-xs"></span>
-            </div>
-
-            <!-- buttons -->
-            <div class="text-center space-x-2">
-                <button type="submit"
-                        class="bg-[#4b2e83] hover:bg-[#3c226a] text-white text-sm font-medium py-2 px-6 rounded-lg shadow">
-                    Save
-                </button>
-                <a asp-action="Index"
-                   class="bg-slate-500 hover:bg-slate-600 text-white text-sm font-medium py-2 px-6 rounded-lg shadow">
-                    Cancel
+        @if (User.IsInRole("Admin"))
+        {
+            <div class="text-center mb-8">
+                <a asp-action="Create"
+                   class="inline-block bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2 px-6 rounded-full transition">
+                    + Create New Announcement
                 </a>
             </div>
-        </form>
-    </div>
-</div>
+        }
 
-@section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-}
+        @if (!Model.Any())
+        {
+            <p class="text-center text-slate-600 text-lg">No active announcements.</p>
+        }
+        else
+        {
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                @foreach (var ann in Model)
+                {
+                    <div class="bg-white rounded-2xl shadow-lg p-6 flex flex-col">
+                        <h3 class="text-xl font-semibold text-[#4b2e83] mb-4">@ann.Title</h3>
+                        <p class="text-slate-700 flex-grow mb-4">@ann.Message</p>
+                        <div class="space-y-1 text-slate-500 text-sm mb-4">
+                            <div>🕒 Created: @ann.CreatedAt.ToString("d MMM yyyy HH:mm")</div>
+                            <div>⏳ Starts: @ann.StartDate.ToString("d MMM yyyy HH:mm")</div>
+                            <div>⌛ Expires: @ann.ExpiresAt.ToString("d MMM yyyy HH:mm")</div>
+                        </div>
+
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <div class="mt-auto flex gap-2">
+                                <a asp-action="Edit" asp-route-id="@ann.Id"
+                                   class="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-medium text-sm py-2 rounded-lg text-center transition">
+                                    Edit
+                                </a>
+                                <a asp-action="Delete" asp-route-id="@ann.Id"
+                                   class="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium text-sm py-2 rounded-lg text-center transition">
+                                    Delete
+                                </a>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</section>

@@ -1,11 +1,11 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using BookHive.Data;
-using BookHive.Models;
+using BookNook.Data;
+using BookNook.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Threading.Tasks;
 
-namespace BookHive.Controllers
+namespace BookNook.Controllers
 {
     [Authorize]
     public class AnnouncementsController : Controller

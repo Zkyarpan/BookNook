@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using BookHive.Models;
+using BookNook.Models;
 using System.Threading.Tasks;
-using BookHive.Data;
+using BookNook.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Identity;
@@ -11,9 +11,9 @@ using Microsoft.Extensions.Configuration;
 using System.Net.Mail;
 using System.Net;
 using Microsoft.AspNetCore.SignalR;
-using BookHive.Hubs;
+using BookNook.Hubs;
 
-namespace BookHive.Controllers
+namespace BookNook.Controllers
 {
     [Authorize]
     public class CartController : Controller
@@ -389,7 +389,7 @@ namespace BookHive.Controllers
                 // Send the email
                 try
                 {
-                    await SendEmailAsync(user.Email, "Your BookHive Order Confirmation", billDetails.ToString());
+                    await SendEmailAsync(user.Email, "Your BookNook Order Confirmation", billDetails.ToString());
                 }
                 catch (Exception ex)
                 {

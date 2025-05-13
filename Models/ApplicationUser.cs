@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace BookHive.Models
+namespace BookNook.Models
 {
     public class ApplicationUser : IdentityUser
     {

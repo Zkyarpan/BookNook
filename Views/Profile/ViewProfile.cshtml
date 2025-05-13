@@ -1,53 +1,71 @@
-﻿@model BookHive.Models.ProfileViewModel
-
+﻿@model BookNook.Models.ProfileViewModel
 @{
     ViewData["Title"] = "View Profile";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<div class="container mx-auto px-4 py-6">
-    <h2 class="text-2xl font-bold text-amber-900 mb-6 text-center">Your Profile</h2>
+<div class="flex items-center justify-center min-h-[calc(100vh-160px)] bg-gradient-to-br from-[#4b2e83]/10 via-[#fbbf24]/10 to-white py-8 px-4">
+    <div class="bg-white/90 backdrop-blur-lg border border-gray-200 rounded-2xl shadow-lg p-8 max-w-xl w-full">
 
-    @if (TempData["SuccessMessage"] != null)
-    {
-        <div class="bg-green-100 text-green-700 p-4 rounded-lg mb-4 text-center">
-            @TempData["SuccessMessage"]
-        </div>
-    }
+        <h2 class="text-3xl font-merriweather text-[#4b2e83] text-center mb-6">Your Profile</h2>
 
-    @if (TempData["ResetLink"] != null)
-    {
-        <div class="bg-blue-100 text-blue-700 p-4 rounded-lg mb-4 text-center">
-            <p>Password reset link: <a href="@TempData["ResetLink"]" class="underline">Click here</a></p>
-        </div>
-    }
+        @* flash messages *@
+        @if (TempData["SuccessMessage"] is string msg)
+        {
+            <div class="bg-green-100 text-green-800 p-3 rounded mb-4 text-center font-medium">
+                @msg
+            </div>
+        }
+        @if (TempData["ResetLink"] is string link)
+        {
+            <div class="bg-blue-100 text-blue-800 p-3 rounded mb-4 text-center text-sm">
+                Password reset link: <a href="@link" class="underline hover:text-blue-600">Click here</a>
+            </div>
+        }
 
-    <div class="bg-amber-50 rounded-lg shadow-md p-6 max-w-lg mx-auto">
-        <div class="text-center mb-4">
+        <div class="text-center mb-6">
             @if (!string.IsNullOrEmpty(Model.ProfileImageUrl))
             {
-                <img src="@Model.ProfileImageUrl" alt="Profile Image" class="w-32 h-32 object-cover rounded-full mx-auto" />
+                <img src="@Model.ProfileImageUrl"
+                     alt="Profile"
+                     class="w-32 h-32 object-cover rounded-full mx-auto border-2 border-[#4b2e83]" />
             }
             else
             {
-                <div class="w-32 h-32 bg-gray-200 flex items-center justify-center rounded-full mx-auto">
-                    <span class="text-gray-600">No Image</span>
+                <div class="w-32 h-32 bg-gray-200 flex items-center justify-center rounded-full mx-auto text-gray-500">
+                    No Image
                 </div>
             }
         </div>
-        <dl class="grid grid-cols-1 gap-4">
-            <dt class="text-gray-700 font-semibold">Username</dt>
-            <dd class="text-gray-600">@Model.UserName</dd>
-            <dt class="text-gray-700 font-semibold">Email</dt>
-            <dd class="text-gray-600">@Model.Email</dd>
-            <dt class="text-gray-700 font-semibold">First Name</dt>
-            <dd class="text-gray-600">@(Model.FirstName ?? "Not set")</dd>
-            <dt class="text-gray-700 font-semibold">Last Name</dt>
-            <dd class="text-gray-600">@(Model.LastName ?? "Not set")</dd>
+
+        <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-gray-700 text-sm">
+            <div>
+                <dt class="font-medium">Username</dt>
+                <dd class="mt-1">@Model.UserName</dd>
+            </div>
+            <div>
+                <dt class="font-medium">Email</dt>
+                <dd class="mt-1">@Model.Email</dd>
+            </div>
+            <div>
+                <dt class="font-medium">First Name</dt>
+                <dd class="mt-1">@(Model.FirstName ?? "Not set")</dd>
+            </div>
+            <div>
+                <dt class="font-medium">Last Name</dt>
+                <dd class="mt-1">@(Model.LastName ?? "Not set")</dd>
+            </div>
         </dl>
-        <div class="mt-6 flex justify-center gap-3">
-            <a asp-action="Edit" class="inline-block bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-amber-700">Edit Profile</a>
-            <a asp-action="ChangePassword" class="inline-block bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-amber-700">Change Password</a>
+
+        <div class="mt-8 flex flex-col sm:flex-row justify-center gap-4">
+            <a asp-action="Edit"
+               class="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2 px-4 rounded-lg text-center transition">
+                Edit Profile
+            </a>
+            <a asp-action="ChangePassword"
+               class="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2 px-4 rounded-lg text-center transition">
+                Change Password
+            </a>
         </div>
     </div>
 </div>

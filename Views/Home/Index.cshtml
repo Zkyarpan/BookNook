@@ -1,22 +1,32 @@
-﻿@model BookHive.Models.HomeViewModel
+﻿@model BookNook.Models.HomeViewModel
 @{
     ViewData["Title"] = "Home";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
 <!-- Hero -->
-<section class="relative">
-    <img src="https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&w=1920&q=80" alt="Books hero" class="absolute inset-0 w-full h-full object-cover opacity-20">
+<section class="relative font-inter">
+    <img src="https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&w=1920&q=80"
+         alt="Books hero"
+         class="absolute inset-0 w-full h-full object-cover opacity-20">
     <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
-        <h1 class="text-4xl sm:text-5xl md:text-6xl font-merriweather font-bold text-[#4b2e83] mb-4">Discover Your Next Favourite Book</h1>
-        <p class="text-lg sm:text-xl text-slate-700 mb-8">Curated collections, exclusive discounts, and fast delivery—everything a reader needs.</p>
-        <a asp-controller="Books" asp-action="Index" class="inline-block bg-[#fbbf24] text-[#4b2e83] px-10 py-3 rounded-full font-medium hover:bg-[#f8d267] transition">Browse Catalogue</a>
+        <h1 class="font-merriweather text-4xl sm:text-5xl md:text-6xl text-[#4b2e83] font-bold mb-4">
+            Discover Your Next Favourite Book
+        </h1>
+        <p class="font-inter text-lg sm:text-xl text-slate-700 mb-8">
+            Curated collections, exclusive discounts, and fast delivery—everything a reader needs.
+        </p>
+        <a asp-controller="Books"
+           asp-action="Index"
+           class="inline-block bg-[#fbbf24] text-[#4b2e83] px-10 py-3 rounded-full font-inter font-semibold hover:bg-[#f8d267] transition">
+            Browse Catalogue
+        </a>
     </div>
 </section>
 
 <!-- On Sale -->
-<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-    <h2 class="text-2xl font-semibold text-[#4b2e83] mb-6">Limited‑Time Deals</h2>
+<section class="font-inter max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <h2 class="font-merriweather text-2xl font-semibold text-[#4b2e83] mb-6">Limited-Time Deals</h2>
     @{
         var onSaleBooks = Model.Books.Where(b => b.OnSaleFlag).ToList();
     }
@@ -33,22 +43,33 @@
                             @if (!string.IsNullOrEmpty(book.CoverImageUrl))
                             {
                                 <a asp-controller="Books" asp-action="Details" asp-route-id="@book.Id">
-                                    <img src="@book.CoverImageUrl" alt="@book.Title" class="w-full h-52 object-cover rounded mb-3" />
+                                    <img src="@book.CoverImageUrl"
+                                         alt="@book.Title"
+                                         class="w-full h-52 object-cover rounded mb-3" />
                                 </a>
                             }
                             else
                             {
-                                <div class="w-full h-52 bg-slate-200 flex items-center justify-center rounded mb-3"><span class="text-sm text-slate-500">No Image</span></div>
+                                <div class="w-full h-52 bg-slate-200 flex items-center justify-center rounded mb-3">
+                                    <span class="text-sm text-slate-500">No Image</span>
+                                </div>
                             }
-                            <h3 class="font-medium text-[#4b2e83] line-clamp-2 mb-1"><a asp-controller="Books" asp-action="Details" asp-route-id="@book.Id">@book.Title</a></h3>
-                            <p class="text-slate-600 text-sm mb-1">by @book.Author</p>
+                            <h3 class="font-inter font-medium text-[#4b2e83] line-clamp-2 mb-1">
+                                <a asp-controller="Books" asp-action="Details" asp-route-id="@book.Id">
+                                    @book.Title
+                                </a>
+                            </h3>
+                            <p class="font-inter text-slate-600 text-sm mb-1">by @book.Author</p>
                             @if (item.IsDiscountActive)
                             {
-                                <p class="text-sm"><span class="line-through text-slate-400">$@book.Price</span><span class="text-[#4b2e83] ml-2 font-semibold">$@item.DiscountedPrice</span></p>
+                                <p class="font-inter text-sm">
+                                    <span class="line-through text-slate-400">$@book.Price</span>
+                                    <span class="ml-2 font-semibold text-[#4b2e83]">$@item.DiscountedPrice</span>
+                                </p>
                             }
                             else
                             {
-                                <p class="text-slate-600 text-sm">$@book.Price</p>
+                                <p class="font-inter text-slate-600 text-sm">$@book.Price</p>
                             }
                         </div>
                     </div>
@@ -58,40 +79,53 @@
     }
     else
     {
-        <p class="text-slate-600">No deals at the moment—check back soon!</p>
+        <p class="font-inter text-slate-600">No deals at the moment—check back soon!</p>
     }
 </section>
 
-<!-- Featured -->
-<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-    <h2 class="text-2xl font-semibold text-[#4b2e83] mb-6">Featured Picks</h2>
+<!-- Featured Picks -->
+<section class="font-inter max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+    <h2 class="font-merriweather text-2xl font-semibold text-[#4b2e83] mb-6">Featured Picks</h2>
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-        @foreach (var item in Model.Books.OrderBy(b => Guid.NewGuid()).Take(8))
+        @foreach (var item in Model.Books.OrderBy(_ => Guid.NewGuid()).Take(8))
         {
             var book = item.Book;
             <div class="bg-white rounded-lg shadow hover:shadow-lg transition">
                 @if (!string.IsNullOrEmpty(book.CoverImageUrl))
                 {
                     <a asp-controller="Books" asp-action="Details" asp-route-id="@book.Id">
-                        <img src="@book.CoverImageUrl" alt="@book.Title" class="w-full h-60 object-cover rounded-t" />
+                        <img src="@book.CoverImageUrl"
+                             alt="@book.Title"
+                             class="w-full h-60 object-cover rounded-t" />
                     </a>
                 }
                 else
                 {
-                    <div class="w-full h-60 bg-slate-200 flex items-center justify-center rounded-t"><span class="text-sm text-slate-500">No Image</span></div>
+                    <div class="w-full h-60 bg-slate-200 flex items-center justify-center rounded-t">
+                        <span class="text-sm text-slate-500">No Image</span>
+                    </div>
                 }
                 <div class="p-4">
-                    <h3 class="font-medium text-[#4b2e83] mb-1 line-clamp-2"><a asp-controller="Books" asp-action="Details" asp-route-id="@book.Id">@book.Title</a></h3>
-                    <p class="text-slate-600 text-sm mb-2">by @book.Author</p>
+                    <h3 class="font-merriweather font-medium text-[#4b2e83] mb-1 line-clamp-2">
+                        <a asp-controller="Books" asp-action="Details" asp-route-id="@book.Id">
+                            @book.Title
+                        </a>
+                    </h3>
+                    <p class="font-inter text-slate-600 text-sm mb-2">by @book.Author</p>
                     @if (item.IsDiscountActive)
                     {
-                        <p class="text-sm mb-2"><span class="line-through text-slate-400">$@book.Price</span><span class="text-[#4b2e83] ml-2 font-semibold">$@item.DiscountedPrice</span></p>
+                        <p class="font-inter text-sm mb-2">
+                            <span class="line-through text-slate-400">$@book.Price</span>
+                            <span class="ml-2 font-semibold text-[#4b2e83]">$@item.DiscountedPrice</span>
+                        </p>
                     }
                     else
                     {
-                        <p class="text-slate-600 text-sm mb-2">$@book.Price</p>
+                        <p class="font-inter text-slate-600 text-sm mb-2">$@book.Price</p>
                     }
-                    <p class="text-xs text-slate-500">Added: @book.AddedDate.ToString("d MMM yy")</p>
+                    <p class="font-inter text-xs text-slate-500">
+                        Added: @book.AddedDate.ToString("d MMM yy")
+                    </p>
                 </div>
             </div>
         }
@@ -100,6 +134,6 @@
 
 @section Scripts {
     <script>
-        // Page-specific JS (if needed)
+        // (No additional JS needed here)
     </script>
 }

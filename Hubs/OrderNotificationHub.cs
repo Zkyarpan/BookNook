@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 
-namespace BookHive.Hubs
+namespace BookNook.Hubs
 {
     public class OrderNotificationHub : Hub
     {

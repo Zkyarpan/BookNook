@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace BookHive.Models
+namespace BookNook.Models
 {
     public class DeletionNoticeViewModel
     {

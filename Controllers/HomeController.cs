@@ -1,12 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using BookHive.Data;
-using BookHive.Models;
+using BookNook.Data;
+using BookNook.Models;
 using Microsoft.AspNetCore.Identity;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
-namespace BookHive.Controllers
+namespace BookNook.Controllers
 {
     public class HomeController : Controller
     {

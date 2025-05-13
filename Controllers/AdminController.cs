@@ -2,19 +2,19 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
-using BookHive.Models;
+using BookNook.Models;
 using System.Net.Mail;
 using System.Net;
 using System.Linq;
 using Microsoft.EntityFrameworkCore;
-using BookHive.Data;
+using BookNook.Data;
 using System.IO;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using BookHive.Hubs;
+using BookNook.Hubs;
 using Microsoft.AspNetCore.SignalR;
 
-namespace BookHive.Controllers
+namespace BookNook.Controllers
 {
     [Authorize(Roles = "Admin")]
     public class AdminController : Controller
@@ -135,12 +135,12 @@ namespace BookHive.Controllers
 
                 await SendEmailAsync(
                     user.Email,
-                    "Deletion Notice from BookHive",
+                    "Deletion Notice from BookNook",
                     $"<p>Dear {user.FirstName ?? "User"},</p>" +
-                    $"<p>You have received a deletion notice from the BookHive Admin:</p>" +
+                    $"<p>You have received a deletion notice from the BookNook Admin:</p>" +
                     $"<p>{model.Message}</p>" +
                     $"<p>Please respond to this email or take appropriate action to avoid account deletion.</p>" +
-                    $"<p>Best regards,<br>BookHive Admin</p>"
+                    $"<p>Best regards,<br>BookNook Admin</p>"
                 );
 
                 TempData["PendingDeletionUserId"] = user.Id;
@@ -179,11 +179,11 @@ namespace BookHive.Controllers
 
                 await SendEmailAsync(
                     user.Email,
-                    "Deletion Notice Canceled - BookHive",
+                    "Deletion Notice Canceled - BookNook",
                     $"<p>Dear {user.FirstName ?? "User"},</p>" +
                     $"<p>We are pleased to inform you that the deletion notice for your account has been canceled.</p>" +
                     $"<p>Thank you for addressing the concerns. Your account remains active.</p>" +
-                    $"<p>Best regards,<br>BookHive Admin</p>"
+                    $"<p>Best regards,<br>BookNook Admin</p>"
                 );
 
                 TempData["SuccessMessage"] = $"Deletion notice for {user.Email} has been canceled.";
@@ -301,12 +301,12 @@ namespace BookHive.Controllers
                 {
                     await SendEmailAsync(
                         email,
-                        "Staff Account Created - BookHive",
+                        "Staff Account Created - BookNook",
                         $"<p>Dear Staff,</p>" +
                         $"<p>Your staff account has been created. Please log in with the following credentials:</p>" +
                         $"<p>Email: {email}</p>" +
                         $"<p>Password: {password}</p>" +
-                        $"<p>Best regards,<br>BookHive Admin</p>"
+                        $"<p>Best regards,<br>BookNook Admin</p>"
                     );
                     TempData["SuccessMessage"] = $"Staff account created for {email}.";
                 }

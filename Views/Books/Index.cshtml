@@ -1,298 +1,143 @@
-﻿@model IEnumerable<BookHive.Models.BookWithDiscountViewModel>
+﻿@model IEnumerable<BookNook.Models.BookWithDiscountViewModel>
 @using Microsoft.AspNetCore.Identity
-@inject UserManager<BookHive.Models.ApplicationUser> UserManager
+@inject UserManager<BookNook.Models.ApplicationUser> UserManager
 
 @{
     ViewData["Title"] = "Books";
 }
 
-<div class="max-w-7xl mx-auto px-4 py-8">
-
-    <!-- Admin: Create new book ----------------------------------------->
-    @if (User.Identity.IsAuthenticated)
-    {
-        var user = await UserManager.GetUserAsync(User);
-        if (user != null && await UserManager.IsInRoleAsync(user, "Admin"))
+<div class="container mx-auto max-w-7xl px-6 py-8">
+    <!-- Actions -->
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold text-amber-900">Our Book Collection</h1>
+        @if (User.Identity.IsAuthenticated)
         {
-            <div class="text-center mb-6">
-                <a asp-action="Create"
-                   class="inline-block bg-[#4b2e83] hover:bg-[#3c226a] text-white text-sm font-medium py-2 px-4 rounded-lg shadow">
-                    + Create New Book
-                </a>
-            </div>
-        }
-    }
-
-    <!-- Customers: quick navigation ------------------------------------>
-    @if (User.Identity.IsAuthenticated)
-    {
-        var user = await UserManager.GetUserAsync(User);
-        if (user != null && !(await UserManager.IsInRoleAsync(user, "Admin") || await UserManager.IsInRoleAsync(user, "Staff")))
-        {
-            <div class="flex justify-center gap-4 mb-6">
-                <a asp-controller="Cart" asp-action="Whitelist"
-                   class="inline-block bg-[#4b2e83] hover:bg-[#3c226a] text-white text-sm font-medium py-2 px-4 rounded-lg shadow">
-                    View Wishlist
-                </a>
-            </div>
-        }
-    }
-
-    <!-- Category tabs --------------------------------------------------->
-    <ul class="flex flex-wrap justify-center gap-2 mb-6">
-        @foreach (var tab in new[]
-        {
-        ("all","All Books"),("bestsellers","Bestsellers"),("awardwinners","Award Winners"),
-        ("newreleases","New Releases"),("newarrivals","New Arrivals"),
-        ("comingsoon","Coming Soon"),("deals","Deals")
-        })
-        {
-            var active = ViewBag.Category == tab.Item1;
-            <li>
-                <a asp-action="Index" asp-route-category="@tab.Item1" asp-route-page="1"
-                   class="inline-block px-4 py-2 text-sm font-medium rounded-lg
-                          @(active ? "bg-[#4b2e83] text-white" : "bg-[#fbbf24]/20 text-[#4b2e83] hover:bg-[#fbbf24]/40")">
-                    @tab.Item2
-                </a>
-            </li>
-        }
-    </ul>
-
-    <!-- Filter bar ------------------------------------------------------->
-    <form asp-action="Index" method="get" id="filterForm"
-          class="flex flex-wrap gap-3 justify-center mb-8">
-
-        <input name="search" value="@ViewBag.Search" placeholder="Search title / ISBN / description"
-               class="p-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#fbbf24] w-56" />
-
-        <select name="sort"
-                class="p-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#fbbf24]">
-            <option value="title" selected="@(ViewBag.Sort == "title")">Title</option>
-            <option value="author" selected="@(ViewBag.Sort == "author")">Author</option>
-            <option value="publicationdate" selected="@(ViewBag.Sort == "publicationdate")">Publication Date</option>
-            <option value="price" selected="@(ViewBag.Sort == "price")">Price</option>
-            <option value="popularity" selected="@(ViewBag.Sort == "popularity")">Popularity</option>
-        </select>
-
-        <input name="author" value="@ViewBag.Author" placeholder="Author"
-               class="p-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#fbbf24] w-40" />
-
-        <input name="genre" value="@ViewBag.Genre" placeholder="Genre"
-               class="p-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#fbbf24] w-32" />
-
-        <select name="availability"
-                class="p-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#fbbf24]">
-            <option value="all" selected="@(ViewBag.Availability == "all")">All Stock</option>
-            <option value="available" selected="@(ViewBag.Availability == "available")">In Stock</option>
-            <option value="unavailable" selected="@(ViewBag.Availability == "unavailable")">Out of Stock</option>
-        </select>
-
-        <select name="physicalLibraryAccess"
-                class="p-2 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#fbbf24]">
-            <option value="" selected="@(ViewBag.PhysicalLibraryAccess == null)">All Libraries</option>
-            <option value="true" selected="@(ViewBag.PhysicalLibraryAccess == true)">In Library</option>
-            <option value="false" selected="@(ViewBag.PhysicalLibraryAccess == false)">Online Only</option>
-        </select>
-
-        <div class="flex gap-1">
-            <input name="minPrice" value="@ViewBag.MinPrice" placeholder="Min $"
-                   type="number" step="0.01"
-                   class="p-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-[#fbbf24] w-20" />
-            <input name="maxPrice" value="@ViewBag.MaxPrice" placeholder="Max $"
-                   type="number" step="0.01"
-                   class="p-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-[#fbbf24] w-20" />
-        </div>
-
-        <input name="minRating" value="@ViewBag.MinRating" placeholder="Min ★ (0‑5)"
-               type="number" step="0.1" min="0" max="5"
-               class="p-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-[#fbbf24] w-24" />
-
-        <input name="language" value="@ViewBag.Language" placeholder="Language"
-               class="p-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-[#fbbf24] w-28" />
-
-        <select name="format"
-                class="p-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-[#fbbf24]">
-            <option value="" selected="@(string.IsNullOrEmpty(ViewBag.Format))">All Formats</option>
-            @foreach (var f in new[] { "paperback", "hardcover", "signed", "limited", "first", "collectors", "authors", "deluxe" })
+            var user = await UserManager.GetUserAsync(User);
+            if (user != null && await UserManager.IsInRoleAsync(user, "Admin"))
             {
-                <option value="@f" selected="@(ViewBag.Format == f)">@f.ToUpperInvariant()</option>
+                <a asp-action="Create" class="bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold py-2 px-4 rounded shadow">
+                    + Add New Book
+                </a>
             }
-        </select>
-
-        <input name="publisher" value="@ViewBag.Publisher" placeholder="Publisher"
-               class="p-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-[#fbbf24] w-32" />
-
-        <button type="submit"
-                class="bg-[#fbbf24] hover:bg-[#f8d267] text-[#4b2e83] text-sm font-medium py-2 px-4 rounded-lg shadow">
-            Apply Filters
-        </button>
-    </form>
-
-    <!-- Book grid -------------------------------------------------------->
-    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-        @foreach (var item in Model)
-        {
-            var book = item.Book;
-            <div class="bg-white rounded-xl shadow hover:shadow-lg transition p-3 flex flex-col relative">
-                @if (item.OnSaleFlag)
-                {
-                    <span class="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-0.5 rounded">SALE</span>
-                }
-
-                <!-- cover -->
-                @if (!string.IsNullOrEmpty(book.CoverImageUrl))
-                {
-                    <a asp-action="Details" asp-route-id="@book.Id">
-                        <img src="@book.CoverImageUrl" alt="@book.Title"
-                             class="w-full h-40 object-cover rounded mb-3" />
-                    </a>
-                }
-                else
-                {
-                    <div class="w-full h-40 bg-slate-200 flex items-center justify-center rounded mb-3">
-                        <span class="text-xs text-slate-500">No Image</span>
-                    </div>
-                }
-
-                <!-- wishlist toggle (customers only) -->
-                @if (User.Identity.IsAuthenticated)
-                {
-                    var user = await UserManager.GetUserAsync(User);
-                    if (user != null && !(await UserManager.IsInRoleAsync(user, "Admin") || await UserManager.IsInRoleAsync(user, "Staff")))
-                    {
-                        <button class="absolute top-2 right-2 wishlist-toggle text-slate-500 hover:text-pink-600"
-                                data-book-id="@book.Id" title="Toggle Wishlist">
-                            <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24">
-                                <path class="heart-outline"
-                                      d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
-                                      fill="none" stroke="currentColor" stroke-width="2" />
-                                <path class="heart-filled hidden"
-                                      d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                            </svg>
-                        </button>
-                    }
-                }
-
-                <!-- details -->
-                <h3 class="text-sm font-semibold text-[#4b2e83] mb-0.5 line-clamp-2">
-                    <a asp-action="Details" asp-route-id="@book.Id">@book.Title</a>
-                </h3>
-                <p class="text-xs text-slate-600 mb-1">by @book.Author</p>
-
-                @if (item.IsDiscountActive)
-                {
-                    <p class="text-xs">
-                        <span class="line-through text-slate-400">$@book.Price</span>
-                        <span class="text-green-600 ml-1">$@item.DiscountedPrice</span>
-                    </p>
-                }
-                else
-                {
-                    <p class="text-xs text-slate-600">$@book.Price</p>
-                }
-
-                <p class="text-xs @(book.Quantity > 0 ? "text-slate-600" : "text-red-600") mb-1">
-                    @(book.Quantity > 0 ? $"Qty: {book.Quantity}" : "Out of Stock")
-                </p>
-
-                <p class="text-xs text-slate-500 line-clamp-2 flex-grow">@book.Description</p>
-                <p class="text-[10px] text-slate-400 mt-1">Added @book.AddedDate.ToString("d MMM yy")</p>
-
-                <!-- admin action buttons -->
-                @if (User.Identity.IsAuthenticated)
-                {
-                    var user = await UserManager.GetUserAsync(User);
-                    if (user != null && await UserManager.IsInRoleAsync(user, "Admin"))
-                    {
-                        <div class="flex gap-1 mt-2">
-                            <a asp-action="Edit" asp-route-id="@book.Id"
-                               class="flex-1 bg-[#4b2e83] hover:bg-[#3c226a] text-white text-xs py-1 rounded">
-                                Edit
-                            </a>
-                            <a asp-action="Delete" asp-route-id="@book.Id"
-                               class="flex-1 bg-red-600 hover:bg-red-700 text-white text-xs py-1 rounded">
-                                Delete
-                            </a>
-                        </div>
-                    }
-                }
-            </div>
+            else if (user != null)
+            {
+                <a asp-controller="Cart" asp-action="Whitelist" class="bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold py-2 px-4 rounded shadow">
+                    View Wishlist
+                </a>
+            }
         }
     </div>
 
-    <!-- Pagination ------------------------------------------------------->
-    @if (ViewBag.TotalPages > 1)
-    {
-        <div class="flex justify-center mt-10">
-            <ul class="inline-flex space-x-1">
-                @for (int i = 1; i <= ViewBag.TotalPages; i++)
+    <div class="flex flex-col lg:flex-row gap-8">
+        <!-- Sidebar Filters -->
+        <aside class="lg:w-1/4 bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Filter & Sort</h2>
+            <form asp-action="Index" method="get" id="filterForm" class="space-y-4">
+                <div>
+                    <input name="search" value="@ViewBag.Search" placeholder="Search books..."
+                           class="w-full border border-gray-300 rounded px-4 py-2 focus:ring-amber-500 focus:border-amber-500" />
+                </div>
+                <div>
+                    <select name="sort" class="w-full border border-gray-300 rounded px-4 py-2 focus:ring-amber-500 focus:border-amber-500">
+                        <option value="title" selected="@(ViewBag.Sort=="title")">Sort by Title</option>
+                        <option value="author" selected="@(ViewBag.Sort=="author")">Sort by Author</option>
+                        <option value="price" selected="@(ViewBag.Sort=="price")">Sort by Price</option>
+                        <option value="publicationdate" selected="@(ViewBag.Sort=="publicationdate")">Sort by Newest</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <input name="minPrice" value="@ViewBag.MinPrice" type="number" step="0.01" placeholder="Min $"
+                           class="border border-gray-300 rounded px-3 py-2 focus:ring-amber-500 focus:border-amber-500" />
+                    <input name="maxPrice" value="@ViewBag.MaxPrice" type="number" step="0.01" placeholder="Max $"
+                           class="border border-gray-300 rounded px-3 py-2 focus:ring-amber-500 focus:border-amber-500" />
+                </div>
+                <button type="submit" class="w-full bg-amber-600 hover:bg-amber-700 text-white py-2 rounded font-semibold">Apply Filters</button>
+                <button type="button" onclick="resetFilters()" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded font-medium">Reset</button>
+            </form>
+        </aside>
+
+        <!-- Book Grid -->
+        <section class="lg:w-3/4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+                @foreach (var item in Model)
                 {
-                    var active = i == ViewBag.CurrentPage;
-                    <li>
-                        <a asp-action="Index" asp-route-page="@i"
-                           asp-route-sort="@ViewBag.Sort"
-                           asp-route-category="@ViewBag.Category"
-                           asp-route-search="@ViewBag.Search"
-                           asp-route-author="@ViewBag.Author"
-                           asp-route-genre="@ViewBag.Genre"
-                           asp-route-availability="@ViewBag.Availability"
-                           asp-route-physicalLibraryAccess="@ViewBag.PhysicalLibraryAccess"
-                           asp-route-minPrice="@ViewBag.MinPrice"
-                           asp-route-maxPrice="@ViewBag.MaxPrice"
-                           asp-route-minRating="@ViewBag.MinRating"
-                           asp-route-language="@ViewBag.Language"
-                           asp-route-format="@ViewBag.Format"
-                           asp-route-publisher="@ViewBag.Publisher"
-                           class="px-3 py-1.5 text-xs rounded
-                                  @(active ? "bg-[#4b2e83] text-white" : "bg-[#fbbf24]/20 text-[#4b2e83] hover:bg-[#fbbf24]/40")">
-                            @i
-                        </a>
-                    </li>
+                    var b = item.Book;
+                    <div class="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-200">
+                        <div class="relative">
+                            @if (!string.IsNullOrEmpty(b.CoverImageUrl))
+                            {
+                                <img src="@b.CoverImageUrl" alt="@b.Title" class="w-full h-56 object-cover" />
+                            }
+                            else
+                            {
+                                <div class="w-full h-56 bg-gray-100 flex items-center justify-center">
+                                    <span class="text-gray-400">No Cover</span>
+                                </div>
+                            }
+                            @if (item.OnSaleFlag)
+                            {
+                                <span class="absolute top-2 right-2 bg-red-600 text-white text-xs font-semibold px-2 py-1 rounded">SALE</span>
+                            }
+                        </div>
+                        <div class="p-4 flex flex-col h-full">
+                            <h3 class="text-lg font-semibold text-amber-900 mb-1 line-clamp-2">
+                                <a asp-action="Details" asp-route-id="@b.Id" class="hover:underline">@b.Title</a>
+                            </h3>
+                            <p class="text-sm text-gray-600 mb-2">by @b.Author</p>
+                            <div class="mt-auto">
+                                @if (item.IsDiscountActive)
+                                {
+                                    <p class="text-gray-500 text-sm line-through">$@b.Price</p>
+                                    <p class="text-amber-600 text-xl font-bold">$@item.DiscountedPrice</p>
+                                }
+                                else
+                                {
+                                    <p class="text-gray-800 text-xl font-bold">$@b.Price</p>
+                                }
+                                <p class="text-xs text-gray-500 mt-1">Stock: <span class="@(b.Quantity>0?"text-green-600":"text-red-600")">@(b.Quantity > 0 ? b.Quantity.ToString() : "Out")</span></p>
+
+                                @* Add to Cart button for customers *@
+                                @if (User.Identity.IsAuthenticated)
+                                {
+                                    var user2 = await UserManager.GetUserAsync(User);
+                                    if (user2 != null && !(await UserManager.IsInRoleAsync(user2, "Admin")))
+                                    {
+                                        <a asp-action="Details" asp-route-id="@b.Id"
+                                           class="block mt-4 bg-amber-600 hover:bg-amber-700 text-white text-center py-2 rounded font-medium">View</a>
+                                    }
+                                }
+                            </div>
+                        </div>
+                    </div>
                 }
-            </ul>
-        </div>
-    }
+            </div>
+
+            <!-- Pagination -->
+            @if (ViewBag.TotalPages > 1)
+            {
+                <nav class="mt-8 flex justify-center">
+                    <ul class="inline-flex -space-x-px">
+                        @for (int i = 1; i <= ViewBag.TotalPages; i++)
+                        {
+                            var active = i == ViewBag.CurrentPage;
+                            <li>
+                                <a asp-action="Index" asp-route-page="@i"
+                                   class="px-4 py-2 text-sm font-medium rounded-l-lg border @(active?"bg-amber-600 text-white":"bg-white text-amber-600 hover:bg-amber-100")">
+                                    @i
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                </nav>
+            }
+        </section>
+    </div>
 </div>
 
 @section Scripts {
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-        $(function () {
-
-            // preload wishlist state
-            $('.wishlist-toggle').each(function () {
-                const btn = $(this);
-                $.get('@Url.Action("IsInWishlist", "Books")', { bookId: btn.data('book-id') })
-                    .done(res => {
-                        if (res.inWishlist) toggleHeart(btn, true);
-                    });
-            });
-
-            // click handler
-            $('.wishlist-toggle').on('click', function (e) {
-                e.preventDefault();
-                const btn = $(this);
-                $.post('@Url.Action("ToggleWishlist", "Books")',
-                       { id: btn.data('book-id') },
-                       null,
-                       'json')
-                 .done(res => {
-                     if (res.success) toggleHeart(btn, res.inWishlist);
-                     else alert(res.message);
-                 })
-                 .fail(xhr => alert(xhr.responseJSON?.message ?? 'Error toggling wishlist'));
-            });
-
-            function toggleHeart(btn, filled) {
-                btn.toggleClass('text-pink-600', filled)
-                   .toggleClass('text-slate-500', !filled)
-                   .find('.heart-outline').toggleClass('hidden', filled)
-                   .end()
-                   .find('.heart-filled').toggleClass('hidden', !filled);
-            }
-
-            // auto‑submit on dropdown change
-            $('#filterForm select').on('change', () => $('#filterForm').submit());
-        });
+        function resetFilters() {
+            window.location = '@Url.Action("Index", "Books")';
+        }
     </script>
 }

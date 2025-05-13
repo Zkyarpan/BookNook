@@ -1,8 +1,15 @@
-﻿namespace BookHive.Models
+﻿namespace BookNook.Models
 {
     public class BookWithDiscountViewModel
     {
-        public Book Book { get; set; }
+        // Use constructor to initialize required properties
+        public BookWithDiscountViewModel()
+        {
+            Reviews = new List<Review>();
+            // Book must be initialized where the model is created
+        }
+
+        public Book Book { get; set; } = null!;
         public bool OnSaleFlag { get; set; }
         public bool IsDiscountActive { get; set; }
         public decimal DiscountedPrice { get; set; }

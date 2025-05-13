@@ -1,16 +1,16 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using BookHive.Models;
+using BookNook.Models;
 using System.Threading.Tasks;
-using BookHive.Data;
+using BookNook.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Identity;
 using System.Globalization;
 using Microsoft.AspNetCore.SignalR;
-using BookHive.Hubs;
+using BookNook.Hubs;
 
-namespace BookHive.Controllers
+namespace BookNook.Controllers
 {
     [Authorize]
     public class OrdersController : Controller
