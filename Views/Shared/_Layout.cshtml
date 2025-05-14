@@ -17,7 +17,7 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Merriweather:wght@400;700&display=swap" rel="stylesheet">
 
-    <!-- Add SignalR client library -->
+    <!-- SignalR client -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
 
     <style>
@@ -67,19 +67,19 @@
                 display: block;
                 margin-bottom: 5px;
             }
-
-      
     </style>
 </head>
-<body class="flex flex-col min-h-screen bg-gray-50 text-slate-800 antialiased" id="html-root">
-    <!-- Notification container -->
+<body class="flex flex-col min-h-screen bg-gray-50 text-slate-800 antialiased">
+    <!-- Order notifications -->
     <div id="notification-container"></div>
 
-    <!-- NAVBAR -->
-    @inject SignInManager<BookNook.Models.ApplicationUser> SignInManager
-    @inject UserManager<BookNook.Models.ApplicationUser> UserManager
-    @inject BookNook.Data.ApplicationDbContext _context
+    <!-- ANNOUNCEMENTS -->
+    <div id="announcement-notice" class="hidden">
+        <div id="notice-field"></div>
+    </div>
 
+    <!-- NAVBAR -->
+    <!-- NAVBAR -->
     <nav class="bg-[#4b2e83] text-white shadow-md">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
@@ -108,30 +108,77 @@
                     }
                 </div>
 
-                <!-- Search -->
+                <!-- Search Bar -->
                 <div class="flex-grow max-w-lg mx-6 hidden md:block">
                     <form asp-controller="Books" asp-action="Index" method="get" class="relative">
-                        <input name="search"
-                               type="text"
-                               placeholder="Search books…"
+                        <input name="search" type="text" placeholder="Search books…"
                                class="w-full pl-10 pr-4 py-2 rounded-full bg-white/20 border-0 text-white placeholder-white/70 focus:outline-none focus:ring-1 focus:ring-[#fbbf24]" />
                         <button type="submit" class="absolute left-3 top-1/2 transform -translate-y-1/2">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                             </svg>
                         </button>
                     </form>
                 </div>
 
-                <!-- Admin Actions & Profile -->
+                <!-- Cart + Orders + Admin & Profile -->
                 <div class="flex items-center space-x-3">
                     @if (SignInManager.IsSignedIn(User))
                     {
                         var user = await UserManager.GetUserAsync(User);
-                        var isAdmin = await UserManager.IsInRoleAsync(user, "Admin");
+                        var isStaff = await UserManager.IsInRoleAsync(user, "Staff");
 
-                        @* Admin-only buttons *@
-                        @if (isAdmin)
+                        // Cart count
+                        var cartCount = await _context.Carts
+                        .Where(c => c.UserId == user.Id)
+                        .Select(c => c.BookId)
+                        .Distinct()
+                        .CountAsync();
+
+                        // Orders count
+                        var orderCount = await _context.Orders
+                        .Where(o => o.UserId == user.Id && !o.IsCancelled && o.Status != "Received")
+                        .CountAsync();
+
+                        <!-- Cart Icon -->
+                        <a asp-controller="Cart" asp-action="Cart" class="relative hover:text-[#fbbf24]">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                      d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2 9m5-9v9m4-9v9m4-9l2 9" />
+                            </svg>
+                            <span id="cart-count"
+                                  class="absolute -top-1 -right-2 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                                @cartCount
+                            </span>
+                        </a>
+
+                        @if (isStaff)
+                        {
+                            <a asp-controller="Staff" asp-action="FulfillOrder" class="relative hover:text-[#fbbf24]">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                          d="M3 7h18M7 7v12a4 4 0 008 0V7m-8 0V3m8 4V3" />
+                                </svg>
+                                <span class="ml-1">Orders</span>
+                            </a>
+                        }
+
+                        <!-- Orders Icon -->
+                        <a asp-controller="Orders" asp-action="MyOrders" class="relative hover:text-[#fbbf24]">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                      d="M3 7h18M7 7v12a4 4 0 008 0V7m-8 0V3m8 4V3" />
+                            </svg>
+                            <span id="order-count"
+                                  class="absolute -top-1 -right-2 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                                @orderCount
+                            </span>
+                        </a>
+
+                        var isAdmin = await UserManager.IsInRoleAsync(user, "Admin");
+                        @* Admin buttons *@
+                        if (isAdmin)
                         {
                             <a asp-controller="Account" asp-action="CreateStaff"
                                class="bg-[#fbbf24] text-[#4b2e83] px-3 py-1 rounded-full text-sm font-medium hover:bg-[#f9a826] transition">
@@ -158,30 +205,15 @@
                                 <a asp-controller="Account" asp-action="Logout" class="block px-4 py-2 text-sm hover:bg-gray-100">Logout</a>
                             </div>
                         </div>
-
-                        <script>
-                            document.getElementById('profileBtn').addEventListener('click', e => {
-                              e.stopPropagation();
-                              document.getElementById('profileMenu').classList.toggle('hidden');
-                            });
-                            document.addEventListener('click', () => {
-                              document.getElementById('profileMenu').classList.add('hidden');
-                            });
-                        </script>
                     }
                     else
                     {
                         <a asp-controller="Account" asp-action="Login"
-                           class="bg-[#fbbf24] text-[#4b2e83] px-3 py-1 rounded-full text-sm font-medium hover:bg-[#f9a826] transition">
-                            Login
-                        </a>
+                           class="bg-[#fbbf24] text-[#4b2e83] px-3 py-1 rounded-full text-sm font-medium hover:bg-[#f9a826] transition">Login</a>
                         <a asp-controller="Account" asp-action="Register"
-                           class="border border-[#fbbf24] text-[#fbbf24] px-3 py-1 rounded-full text-sm font-medium hover:bg-[#fbbf24] hover:text-[#4b2e83] transition">
-                            Register
-                        </a>
+                           class="border border-[#fbbf24] text-[#fbbf24] px-3 py-1 rounded-full text-sm font-medium hover:bg-[#fbbf24] hover:text-[#4b2e83] transition">Register</a>
                     }
                 </div>
-
             </div>
         </div>
     </nav>
@@ -206,107 +238,56 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Dropdown menu functionality
-            const btn = document.getElementById('profileDropdown');
-            const menu = document.getElementById('profileMenu');
-            if (btn && menu) {
-                btn.addEventListener('click', e => {
+            // Profile dropdown
+            const profileBtn = document.getElementById('profileBtn');
+            const profileMenu = document.getElementById('profileMenu');
+            if (profileBtn && profileMenu) {
+                profileBtn.addEventListener('click', e => {
                     e.stopPropagation();
-                    menu.classList.toggle('hidden');
+                    profileMenu.classList.toggle('hidden');
                 });
-                document.addEventListener('click', () => menu.classList.add('hidden'));
+                document.addEventListener('click', () => profileMenu.classList.add('hidden'));
             }
 
-            // Dark Mode functionality
-            const htmlRoot = document.getElementById('html-root');
-            const themeToggle = document.getElementById('themeToggle');
-            const sunIcon = document.getElementById('sunIcon');
-            const moonIcon = document.getElementById('moonIcon');
-
-            // Load saved theme
-            if (localStorage.getItem('theme') === 'dark') {
-                htmlRoot.classList.add('dark');
-                sunIcon.classList.add('hidden');
-                moonIcon.classList.remove('hidden');
-                document.documentElement.classList.add('dark');
-            }
-
-            themeToggle.addEventListener('click', () => {
-                htmlRoot.classList.toggle('dark');
-                document.documentElement.classList.toggle('dark');
-                if (htmlRoot.classList.contains('dark')) {
-                    localStorage.setItem('theme', 'dark');
-                    sunIcon.classList.add('hidden');
-                    moonIcon.classList.remove('hidden');
-                } else {
-                    localStorage.setItem('theme', 'light');
-                    sunIcon.classList.remove('hidden');
-                    moonIcon.classList.add('hidden');
-                }
-            });
-
-            // SignalR Notification Logic
+            // Order notifications via SignalR
             const connection = new signalR.HubConnectionBuilder()
                 .withUrl("/orderNotificationHub")
                 .build();
-
             let timeoutId = null;
-
-            connection.on("ReceiveOrderNotification", (message) => {
-                const notificationContainer = document.getElementById("notification-container");
-                notificationContainer.textContent = message;
-                notificationContainer.style.display = "block";
-                notificationContainer.style.opacity = "1";
-
-                // Clear any existing timeout
-                if (timeoutId) {
-                    clearTimeout(timeoutId);
-                }
-
-                // Set a new timeout to hide the message after 60 seconds
+            connection.on("ReceiveOrderNotification", message => {
+                const nc = document.getElementById("notification-container");
+                nc.textContent = message;
+                nc.style.display = "block";
+                nc.style.opacity = "1";
+                if (timeoutId) clearTimeout(timeoutId);
                 timeoutId = setTimeout(() => {
-                    notificationContainer.style.opacity = "0";
-                    setTimeout(() => {
-                        notificationContainer.style.display = "none";
-                    }, 500); // Wait for the fade-out transition to complete
+                    nc.style.opacity = "0";
+                    setTimeout(() => nc.style.display = "none", 500);
                 }, 60000);
             });
-
-            // Update cart count dynamically
-            connection.on("UpdateCartCount", (count) => {
-                const cartCountElement = document.getElementById("cart-count");
-                if (cartCountElement) {
-                    cartCountElement.textContent = count;
-                }
+            connection.on("UpdateCartCount", count => {
+                const el = document.getElementById("cart-count");
+                if (el) el.textContent = count;
             });
-
-            // Update order count dynamically
-            connection.on("UpdateOrderCount", (count) => {
-                const orderCountElement = document.getElementById("order-count");
-                if (orderCountElement) {
-                    orderCountElement.textContent = count;
-                }
+            connection.on("UpdateOrderCount", count => {
+                const el = document.getElementById("order-count");
+                if (el) el.textContent = count;
             });
+            connection.start().catch(err => console.error(err));
 
-            connection.start().catch(err => console.error("SignalR Connection Error: ", err));
-
-            // SignalR Announcement Notice Logic
+            // Announcements via SignalR
             const announcementConnection = new signalR.HubConnectionBuilder()
                 .withUrl("/announcementHub")
                 .build();
-
-            announcementConnection.on("ReceiveAnnouncement", (message) => {
-                const noticeField = document.getElementById("notice-field");
-                // Create a new span element for the message
-                const messageElement = document.createElement("span");
-                messageElement.className = "message";
-                messageElement.textContent = message;
-                // Append the new message to the notice field
-                noticeField.appendChild(messageElement);
-                noticeField.parentElement.style.display = "block"; // Show the notice container
+            announcementConnection.on("ReceiveAnnouncement", msg => {
+                const nf = document.getElementById("notice-field");
+                const sp = document.createElement("span");
+                sp.className = "message";
+                sp.textContent = msg;
+                nf.appendChild(sp);
+                nf.parentElement.style.display = "block";
             });
-
-            announcementConnection.start().catch(err => console.error("SignalR Announcement Connection Error: ", err));
+            announcementConnection.start().catch(err => console.error(err));
         });
     </script>
 </body>

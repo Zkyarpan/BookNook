@@ -2,84 +2,99 @@
 
 @{
     ViewData["Title"] = "Checkout";
+    var totalItems = ViewBag.TotalItems;
+    var subtotal = ViewBag.TotalPrice;
+    var discountAmt = ViewBag.DiscountAmount;
+    var grandTotal = ViewBag.FinalPrice;
 }
 
-<div class="container mx-auto px-4 py-6">
-    <h2 class="text-2xl font-bold text-center text-amber-900 mb-6">Checkout</h2>
+<div class="container mx-auto max-w-7xl px-6 py-8">
+    <h2 class="text-3xl font-bold text-amber-900 text-center mb-8">Checkout</h2>
 
     @if (TempData["ErrorMessage"] != null)
     {
-        <div class="bg-red-100 text-red-700 p-2 rounded mb-4 text-center text-sm">
+        <div class="max-w-md mx-auto mb-6 bg-red-100 text-red-700 p-4 rounded-lg text-center">
             @TempData["ErrorMessage"]
         </div>
     }
 
-    <div class="bg-amber-50 rounded-lg shadow-md p-6 max-w-3xl mx-auto">
-        <!-- Cart Items Grid -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            @foreach (var (cartItem, discountedPrice, onSale) in Model)
-            {
-                var book = cartItem.Book;
-                <div class="bg-white rounded-lg shadow-md p-4 flex flex-col relative">
+    <!-- Cart items grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+        @foreach (var (cartItem, discountedPrice, onSale) in Model)
+        {
+            var b = cartItem.Book;
+            <div class="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition duration-200 flex flex-col">
+                <div class="relative">
                     @if (onSale)
                     {
-                        <span class="absolute top-2 right-2 bg-red-500 text-white text-xs font-semibold px-2 py-1 rounded">On Sale</span>
+                        <span class="absolute top-2 right-2 bg-red-600 text-white text-xs font-semibold px-2 py-1 rounded">
+                            ON SALE
+                        </span>
                     }
-                    @if (!string.IsNullOrEmpty(book.CoverImageUrl))
+                    @if (!string.IsNullOrEmpty(b.CoverImageUrl))
                     {
-                        <img src="@book.CoverImageUrl" alt="@book.Title" class="w-full h-36 object-cover rounded mb-2" />
+                        <img src="@b.CoverImageUrl" alt="@b.Title" class="w-full h-48 object-cover" />
                     }
                     else
                     {
-                        <div class="w-full h-36 bg-gray-200 flex items-center justify-center rounded mb-2">
-                            <span class="text-sm">No Image</span>
+                        <div class="w-full h-48 bg-gray-100 flex items-center justify-center">
+                            <span class="text-gray-400 text-sm">No Cover</span>
                         </div>
                     }
-                    <h3 class="text-base font-semibold text-amber-800 mb-1">@book.Title</h3>
-                    <p class="text-gray-600 text-sm mb-1">by @book.Author</p>
-                    @if (discountedPrice < book.Price)
-                    {
-                        <p class="text-gray-600 text-sm mb-1">
-                            <span class="line-through">Price: $@book.Price</span>
-                            <span class="text-green-600 ml-2">Now: $@discountedPrice</span>
-                        </p>
-                    }
-                    else
-                    {
-                        <p class="text-gray-600 text-sm mb-1">Price: $@book.Price</p>
-                    }
-                    <p class="text-gray-600 text-sm mb-1">Quantity: @cartItem.Quantity</p>
-                    <p class="text-gray-600 text-sm mb-2">Total: $@(discountedPrice * cartItem.Quantity)</p>
                 </div>
-            }
-        </div>
+                <div class="p-4 flex flex-col flex-grow">
+                    <h3 class="text-lg font-semibold text-amber-900 line-clamp-2 mb-1">
+                        @b.Title
+                    </h3>
+                    <p class="text-sm text-gray-600 mb-2">by @b.Author</p>
+                    <p class="text-sm text-gray-700 mb-2">
+                        Quantity: <strong>@cartItem.Quantity</strong>
+                        &times;
+                        <span class="font-medium">
+                            $@(discountedPrice.ToString("0.00"))
+                        </span>
+                    </p>
+                    <div class="mt-auto">
+                        <p class="text-xl font-bold text-gray-800">
+                            Total: $@((discountedPrice * cartItem.Quantity).ToString("0.00"))
+                        </p>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
 
-        <!-- Total Price and Discount -->
-        <div class="mt-6">
-            <p class="text-gray-700 text-sm">Total Items: @ViewBag.TotalItems</p>
-            <p class="text-gray-700 text-sm">Total Price: $@ViewBag.TotalPrice</p>
-            @if (ViewBag.DiscountAmount > 0)
+    <!-- Summary box -->
+    <div class="max-w-md mx-auto bg-white rounded-lg shadow-lg p-6 mt-10">
+        <div class="space-y-2 text-gray-700">
+            <p>Total items: <strong>@totalItems</strong></p>
+            <p>Subtotal:        <strong>$@subtotal.ToString("0.00")</strong></p>
+            @if (discountAmt > 0)
             {
-                <p class="text-gray-700 text-sm">Discount: $@ViewBag.DiscountAmount</p>
+                <p class="text-green-600">Discount:   <strong>– $@discountAmt.ToString("0.00")</strong></p>
             }
-            else
-            {
-                <p class="text-gray-700 text-sm">No Discounts Applied</p>
-            }
-            <p class="text-gray-700 text-sm font-semibold">Final Price: $@ViewBag.FinalPrice</p>
+            <hr class="my-3" />
+            <p class="text-lg text-gray-900 font-semibold">
+                Grand total: <strong>$@grandTotal.ToString("0.00")</strong>
+            </p>
         </div>
 
-        <!-- Note About Claim Code -->
-        <div class="mt-4 text-center text-gray-600 text-sm">
-            <p>After confirming your order, you will receive a claim code on the My Orders page. Present your membership ID and claim code at the store for in-store pickup.</p>
-        </div>
+        <p class="text-center text-sm text-gray-500 mt-4">
+            After confirming your order, you’ll get a claim code on your “My Orders” page.
+            Use your membership ID + claim code in store for pickup.
+        </p>
 
-        <!-- Confirm Order and Back to Cart Buttons -->
-        <form asp-controller="Cart" asp-action="CheckoutConfirmed" method="post" class="mt-4 text-center">
-            <button type="submit" class="inline-block bg-amber-600 text-white font-medium text-sm py-1.5 px-3 rounded hover:bg-amber-700">Confirm Order</button>
-        </form>
-        <div class="mt-4 text-center">
-            <a asp-controller="Cart" asp-action="Cart" class="inline-block bg-gray-500 text-white font-medium text-sm py-1.5 px-3 rounded hover:bg-gray-600">Back to Cart</a>
+        <div class="flex justify-center gap-4 mt-6">
+            <form asp-controller="Cart" asp-action="CheckoutConfirmed" method="post">
+                <button type="submit"
+                        class="bg-amber-600 hover:bg-amber-700 text-white font-medium py-2 px-6 rounded shadow">
+                    Confirm Order
+                </button>
+            </form>
+            <a asp-controller="Cart" asp-action="Cart"
+               class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-6 rounded shadow">
+                Back to Cart
+            </a>
         </div>
     </div>
 </div>

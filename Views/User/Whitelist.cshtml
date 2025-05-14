@@ -4,69 +4,83 @@
     ViewData["Title"] = "My Whitelist";
 }
 
-<div class="container mx-auto px-4 py-6">
-    <h2 class="text-2xl font-bold text-center text-amber-900 mb-6">My Whitelist</h2>
+<div class="container mx-auto px-4 py-8">
+    <h2 class="text-3xl font-merriweather text-[#4b2e83] text-center mb-8">My Whitelist</h2>
 
     @if (TempData["SuccessMessage"] != null)
     {
-        <div class="bg-green-100 text-green-700 p-2 rounded mb-4 text-center text-sm">
+        <div class="max-w-xl mx-auto bg-green-100 text-green-800 p-4 rounded-lg mb-6 shadow">
             @TempData["SuccessMessage"]
         </div>
     }
-
     @if (TempData["ErrorMessage"] != null)
     {
-        <div class="bg-red-100 text-red-700 p-2 rounded mb-4 text-center text-sm">
+        <div class="max-w-xl mx-auto bg-red-100 text-red-800 p-4 rounded-lg mb-6 shadow">
             @TempData["ErrorMessage"]
         </div>
     }
 
     @if (!Model.Any())
     {
-        <p class="text-center text-gray-600 text-sm">Your whitelist is empty.</p>
+        <p class="text-center text-gray-600">Your wishlist is empty. Browse our <a asp-controller="Books" asp-action="Index" class="text-[#fbbf24] hover:underline">catalog</a> to add books.</p>
     }
     else
     {
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             @foreach (var item in Model)
             {
                 var book = item.Book;
-                <div class="bg-amber-50 rounded-lg shadow-md p-2 flex flex-col relative">
+                <div class="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition p-4 flex flex-col">
+
+                    @* Sale badge *@
                     @if (item.OnSaleFlag && item.IsDiscountActive)
                     {
-                        <span class="absolute top-2 right-2 bg-red-600 text-white text-xs font-medium px-2 py-1 rounded">On Sale</span>
+                        <span class="self-end bg-red-600 text-white text-xs font-semibold px-3 py-1 rounded-full">On Sale</span>
                     }
-                    @if (!string.IsNullOrEmpty(book.CoverImageUrl))
-                    {
-                        <a asp-controller="Books" asp-action="Details" asp-route-id="@book.Id">
-                            <img src="@book.CoverImageUrl" alt="@book.Title" class="w-full h-36 object-cover rounded mb-2" />
-                        </a>
-                    }
-                    else
-                    {
-                        <div class="w-full h-36 bg-gray-200 flex items-center justify-center rounded mb-2">
-                            <span class="text-sm">No Image</span>
-                        </div>
-                    }
-                    <h3 class="text-base font-semibold text-amber-800 mb-1">
-                        <a asp-controller="Books" asp-action="Details" asp-route-id="@book.Id">@book.Title</a>
-                    </h3>
-                    <p class="text-gray-600 text-sm mb-1">by @book.Author</p>
-                    <p class="text-gray-600 text-sm mb-1">
-                        @if (item.IsDiscountActive)
+
+                    @* Cover *@
+                    <a asp-controller="Books" asp-action="Details" asp-route-id="@book.Id" class="block mt-4 mb-3">
+                        @if (!string.IsNullOrEmpty(book.CoverImageUrl))
                         {
-                            <span class="line-through text-gray-500">$@book.Price</span>
-                            <span class="text-green-600 font-medium ml-2">$@item.DiscountedPrice.ToString("F2")</span>
+                            <img src="@book.CoverImageUrl" alt="@book.Title" class="w-full h-48 object-cover rounded-lg" />
                         }
                         else
                         {
-                            <span>Price: $@book.Price</span>
+                            <div class="w-full h-48 bg-gray-100 flex items-center justify-center rounded-lg">
+                                <span class="text-gray-400">No Cover</span>
+                            </div>
                         }
-                    </p>
-                    <p class="text-gray-600 text-sm mb-2 flex-grow line-clamp-2">@book.Description</p>
-                    <form asp-controller="Cart" asp-action="RemoveFromWhitelist" method="post">
+                    </a>
+
+                    @* Title & Author *@
+                    <h3 class="text-lg font-semibold text-[#4b2e83] line-clamp-2 mb-1">
+                        <a asp-controller="Books" asp-action="Details" asp-route-id="@book.Id" class="hover:underline">@book.Title</a>
+                    </h3>
+                    <p class="text-sm text-gray-600 mb-3">by @book.Author</p>
+
+                    @* Price *@
+                    <div class="mb-3">
+                        @if (item.IsDiscountActive)
+                        {
+                            <span class="text-gray-400 line-through">$@book.Price.ToString("F2")</span>
+                            <span class="text-lg font-bold text-green-600 ml-2">$@item.DiscountedPrice.ToString("F2")</span>
+                        }
+                        else
+                        {
+                            <span class="text-lg font-bold text-[#4b2e83]">$@book.Price.ToString("F2")</span>
+                        }
+                    </div>
+
+                    @* Description *@
+                    <p class="text-sm text-gray-700 flex-grow line-clamp-3 mb-4">@book.Description</p>
+
+                    @* Remove button *@
+                    <form asp-controller="Cart" asp-action="RemoveFromWhitelist" method="post" class="mt-auto">
                         <input type="hidden" name="bookId" value="@book.Id" />
-                        <button type="submit" class="w-full bg-red-600 text-white font-medium text-xs py-1 rounded hover:bg-red-700">Remove</button>
+                        <button type="submit"
+                                class="w-full bg-[#fbbf24] text-[#4b2e83] font-medium py-2 rounded-lg hover:bg-[#e0a21d] transition">
+                            Remove from Wishlist
+                        </button>
                     </form>
                 </div>
             }

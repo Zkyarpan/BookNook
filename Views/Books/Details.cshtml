@@ -4,230 +4,378 @@
 
 @{
     ViewData["Title"] = "Book Details";
-    // Hard-code “today” as May 13, 2025 for your demo
-    var today = new DateTime(2025, 5, 13);
-    bool isUpcoming = Model.Book.IsComingSoon
-                      && Model.Book.ReleaseDate.HasValue
-                      && Model.Book.ReleaseDate.Value > today;
 }
 
-<div class="container mx-auto px-4 py-8 max-w-4xl">
-    <!-- Success / Error banners -->
-    @if (TempData["SuccessMessage"] != null)
-    {
-        <div class="bg-green-100 text-green-700 p-4 rounded-lg mb-6 text-center">
-            @TempData["SuccessMessage"]
-        </div>
-    }
-    @if (TempData["ErrorMessage"] != null)
-    {
-        <div class="bg-red-100 text-red-700 p-4 rounded-lg mb-6 text-center">
-            @TempData["ErrorMessage"]
-        </div>
+<style>
+    .star-rating {
+        color: #f59e0b;
+        font-size: 16px;
     }
 
-    <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
-        <div class="p-8">
-            <!-- Title -->
-            <h1 class="text-3xl font-merriweather text-[#4b2e83] mb-4">
-                @Model.Book.Title
-            </h1>
+        .star-rating .empty {
+            color: #d1d5db;
+        }
 
-            <!-- Upcoming badge -->
-            @if (isUpcoming)
+    .review-item {
+        border-bottom: 1px solid #e5e7eb;
+        padding: 10px 0;
+    }
+
+        .review-item:last-child {
+            border-bottom: none;
+        }
+
+    .reply-item {
+        margin-left: 20px;
+        padding: 5px 0;
+        border-left: 2px solid #e5e7eb;
+        padding-left: 10px;
+    }
+
+    .message {
+        padding: 10px;
+        margin-top: 10px;
+        border-radius: 5px;
+        display: none;
+    }
+
+    .success-message {
+        background-color: #d4edda;
+        color: #155724;
+    }
+
+    .error-message {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+
+    .recommendation-card {
+        transition: transform 0.3s ease-in-out;
+    }
+
+        .recommendation-card:hover {
+            transform: scale(1.05);
+        }
+</style>
+
+<div class="container mx-auto px-4 py-6">
+    <div class="bg-white rounded-lg shadow-lg p-8 max-w-3xl mx-auto">
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="bg-green-100 text-green-700 p-4 rounded-lg mb-4 text-center">
+                @TempData["SuccessMessage"]
+            </div>
+        }
+
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="bg-red-100 text-red-700 p-4 rounded-lg mb-4 text-center">
+                @TempData["ErrorMessage"]
+            </div>
+        }
+
+        <div class="flex flex-col md:flex-row gap-6">
+            @if (!string.IsNullOrEmpty(Model.Book.CoverImageUrl))
             {
-                <div class="bg-yellow-100 text-yellow-800 p-3 rounded-lg mb-6 font-semibold text-center">
-                    Upcoming release on @Model.Book.ReleaseDate.Value.ToString("d MMM yyyy")
+                <img src="@Model.Book.CoverImageUrl" alt="@Model.Book.Title" class="w-48 h-48 object-contain rounded-lg mb-4 md:mb-0" />
+            }
+            else
+            {
+                <div class="w-48 h-48 bg-gray-200 flex items-center justify-center rounded-lg mb-4 md:mb-0">
+                    <span>No Image</span>
                 </div>
             }
+            <div class="flex-1">
+                <h2 class="text-xl font-bold text-gray-900 mb-2">@Model.Book.Title</h2>
+                <p class="text-gray-600 text-sm mb-2">Brand: @Model.Book.Author | <a href="#" class="text-blue-600 hover:underline">More books by @Model.Book.Author</a></p>
 
-            <div class="flex flex-col md:flex-row gap-8">
-                <!-- Cover -->
-                <div class="flex-shrink-0">
-                    @if (!string.IsNullOrEmpty(Model.Book.CoverImageUrl))
+                <!-- Display average rating -->
+                @{
+                    double averageRating = Model.Reviews.Any() ? Model.Reviews.Average(r => r.Rating) : 0;
+                    int fullStars = (int)averageRating;
+                    bool hasHalfStar = averageRating - fullStars >= 0.5;
+                    int emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+                }
+                <div class="star-rating mb-2">
+                    @for (int i = 0; i < fullStars; i++)
                     {
-                        <img src="@Model.Book.CoverImageUrl"
-                             alt="@Model.Book.Title"
-                             class="w-48 h-64 object-cover rounded-lg shadow" />
+                        <span>★</span>
+                    }
+                    @if (hasHalfStar)
+                    {
+                        <span>☆</span>
+                    }
+                    @for (int i = 0; i < emptyStars; i++)
+                    {
+                        <span class="empty">★</span>
+                    }
+                    <span class="text-gray-600 text-sm ml-2">(@Model.Reviews.Count() reviews)</span>
+                </div>
+
+                @if (Model.IsDiscountActive)
+                {
+                    <p class="text-gray-900 text-lg font-bold mb-1">
+                        $. <span id="base-price">@Model.DiscountedPrice</span>
+                        <span class="text-gray-500 text-sm line-through ml-2">$. @Model.Book.Price</span>
+                        <span class="text-orange-500 text-sm ml-2">@((int)((Model.Book.Price - Model.DiscountedPrice) / Model.Book.Price * 100))% off</span>
+                    </p>
+                    @if (Model.OnSaleFlag)
+                    {
+                        <p class="text-orange-500 text-sm mb-2">
+                            PROMOTION: Min. spend $. 400
+                        </p>
+                    }
+                }
+                else
+                {
+                    <p class="text-gray-900 text-lg font-bold mb-1">$. <span id="base-price">@Model.Book.Price</span></p>
+                }
+
+                <p class="text-gray-700 text-sm mb-2"><strong>Description:</strong> @Model.Book.Description</p>
+                <p class="text-gray-700 text-sm mb-2">
+                    <strong>Stock:</strong>
+                    @if (Model.Book.Quantity > 0)
+                    {
+                        <span>Qty: @Model.Book.Quantity</span>
                     }
                     else
                     {
-                        <div class="w-48 h-64 bg-gray-200 flex items-center justify-center rounded-lg">
-                            <span class="text-gray-500">No Image</span>
+                        <span class="text-red-600">Out of Stock</span>
+                    }
+                </p>
+
+                @if (User.Identity.IsAuthenticated)
+                {
+                    var user = await UserManager.GetUserAsync(User);
+                    if (user != null)
+                    {
+                        @if (!(await UserManager.IsInRoleAsync(user, "Admin") || await UserManager.IsInRoleAsync(user, "Staff")))
+                        {
+                            <div class="flex items-center gap-4 mb-4">
+                                <div class="flex items-center">
+                                    <label class="text-gray-700 text-sm mr-2">Quantity:</label>
+                                    <button type="button" onclick="updateQuantity(-1)" class="bg-gray-300 text-gray-700 font-medium text-sm py-1 px-2 rounded-l hover:bg-gray-400" id="decrement-btn">-</button>
+                                    <input type="number" id="quantity" name="quantity" value="1" min="1" max="@Model.Book.Quantity" class="w-12 p-1 text-center border border-gray-300 text-sm" readonly />
+                                    <button type="button" onclick="updateQuantity(1)" class="bg-gray-300 text-gray-700 font-medium text-sm py-1 px-2 rounded-r hover:bg-gray-400" id="increment-btn">+</button>
+                                </div>
+                                <div class="flex gap-2">
+                                    <form id="add-to-cart-form" method="post">
+                                        <input type="hidden" id="add-to-cart-quantity" name="quantity" value="1" />
+                                        <button type="button" onclick="addToCart(@Model.Book.Id)" class="inline-block bg-orange-500 text-white font-medium text-sm py-2 px-4 rounded hover:bg-orange-600 @(Model.Book.Quantity == 0 ? "opacity-50 cursor-not-allowed" : "")" @(Model.Book.Quantity == 0 ? "disabled" : "")>Add to Cart</button>
+                                    </form>
+                                </div>
+                            </div>
+                            <p class="text-gray-700 text-sm mb-2">
+                                <strong>Total Price:</strong> $. <span id="total-price">@(Model.IsDiscountActive ? Model.DiscountedPrice : Model.Book.Price)</span>
+                            </p>
+                            <div id="cart-message" class="message"></div>
+                        }
+
+                        @if (await UserManager.IsInRoleAsync(user, "Admin"))
+                        {
+                            <div class="flex gap-2 mt-4">
+                                <a asp-action="Edit" asp-route-id="@Model.Book.Id" class="inline-block bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-amber-700">Edit</a>
+                                <a asp-action="Delete" asp-route-id="@Model.Book.Id" class="inline-block bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700">Delete</a>
+                                <a asp-action="ManageDiscounts" asp-route-id="@Model.Book.Id" class="inline-block bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-amber-700">Manage Discounts</a>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-sm text-red-600 mt-2">Unable to load user information.</p>
+                    }
+                }
+            </div>
+        </div>
+        <!-- Reviews Section -->
+        <div class="mt-8">
+            <h3 class="text-lg font-semibold text-amber-800 mb-4">Reviews</h3>
+            @if (!Model.Reviews.Any())
+            {
+                <p class="text-gray-600 text-sm">No reviews yet.</p>
+            }
+            else
+            {
+                <div class="space-y-4" id="reviews-list">
+                    @foreach (var review in Model.Reviews)
+                    {
+                        <div class="review-item">
+                            <div class="flex items-center mb-2">
+                                <div class="star-rating">
+                                    @for (int i = 1; i <= 5; i++)
+                                    {
+                                        if (i <= review.Rating)
+                                        {
+                                            <span>★</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="empty">★</span>
+                                        }
+                                    }
+                                </div>
+                                <span class="text-gray-600 text-sm ml-2">@review.User.FirstName</span>
+                                <span class="text-gray-500 text-xs ml-2">@review.ReviewDate.ToString("d MMM yyyy")</span>
+                            </div>
+                            <p class="text-gray-600 text-sm">@review.Comment</p>
+
+                            <!-- Replies Section -->
+                            <div class="replies mt-2">
+                                @if (review.Replies != null && review.Replies.Any())
+                                {
+                                    foreach (var reply in review.Replies)
+                                    {
+                                        <div class="reply-item">
+                                            <div class="flex items-center mb-1">
+                                                <span class="text-gray-600 text-sm font-semibold">@reply.User.FirstName</span>
+                                                <span class="text-gray-500 text-xs ml-2">@reply.ReviewDate.ToString("d MMM yyyy")</span>
+                                            </div>
+                                            <p class="text-gray-600 text-sm">@reply.Comment</p>
+                                        </div>
+                                    }
+                                }
+                            </div>
+
+                            <!-- Reply Form -->
+                            @if (User.Identity.IsAuthenticated)
+                            {
+                                var user = await UserManager.GetUserAsync(User);
+                                if (user != null && !(await UserManager.IsInRoleAsync(user, "Admin") || await UserManager.IsInRoleAsync(user, "Staff")) && ViewBag.HasPurchased)
+                                {
+                                    <div class="mt-2">
+                                        <form id="reply-form-@review.Id" class="reply-form" method="post">
+                                            <input type="hidden" name="bookId" value="@Model.Book.Id" />
+                                            <input type="hidden" name="parentReviewId" value="@review.Id" />
+                                            <div class="mb-2">
+                                                <textarea name="comment" class="w-full p-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" rows="3" placeholder="Write a reply..."></textarea>
+                                                <span class="text-red-600 text-sm hidden" id="reply-comment-error-@review.Id"></span>
+                                            </div>
+                                            <button type="button" onclick="submitReply(@review.Id)" class="inline-block bg-amber-600 text-white font-medium text-sm py-1 px-2 rounded hover:bg-amber-700">Reply</button>
+                                        </form>
+                                        <div id="reply-message-@review.Id" class="message"></div>
+                                    </div>
+                                }
+                            }
                         </div>
                     }
                 </div>
+            }
 
-                <div class="flex-1 space-y-4">
-                    <!-- Author & link -->
-                    <p class="text-gray-600">
-                        <span class="font-semibold">Author:</span> @Model.Book.Author
-                        <a href="#" class="text-[#4b2e83] hover:underline ml-2">More by this author</a>
-                    </p>
-
-                    <!-- Rating -->
-                    @{
-                        var avg = Model.Reviews.Any()
-                        ? Model.Reviews.Average(r => r.Rating)
-                        : 0;
-                        int full = (int)avg;
-                        bool half = avg - full >= 0.5;
-                        int empty = 5 - full - (half ? 1 : 0);
-                    }
-                    <div class="star-rating flex items-center text-[#f59e0b] text-lg">
-                        @for (int i = 0; i < full; i++)
-                        {
-                            <span>★</span>
-                        }
-                        @if (half)
-                        {
-                            <span>☆</span>
-                        }
-                        @for (int i = 0; i < empty; i++)
-                        {
-                            <span class="empty">★</span>
-                        }
-                        <span class="text-gray-600 text-sm ml-2">(@Model.Reviews.Count() reviews)</span>
-                    </div>
-
-                    <!-- Price / Discount -->
-                    <div>
-                        @if (Model.IsDiscountActive)
-                        {
-                            <p class="text-2xl font-bold text-[#4b2e83]">
-                                $@Model.DiscountedPrice
-                                <span class="line-through text-gray-400 ml-2">$@Model.Book.Price</span>
-                                <span class="text-[#fbbf24] ml-2">
-                                    @((int)((Model.Book.Price - Model.DiscountedPrice) / Model.Book.Price * 100))% off
-                                </span>
-                            </p>
-                            @if (Model.OnSaleFlag)
-                            {
-                                <p class="text-sm text-[#92400e]">Promo: Min. spend $400</p>
-                            }
-                        }
-                        else
-                        {
-                            <p class="text-2xl font-bold text-[#4b2e83]">
-                                $@Model.Book.Price
-                            </p>
-                        }
-                    </div>
-
-                    <!-- Description -->
-                    <p class="text-gray-700">
-                        <strong>Description:</strong> @Model.Book.Description
-                    </p>
-
-                    <!-- Stock + Add-to-cart or Admin actions -->
-                    @if (User.Identity.IsAuthenticated)
+            @if (User.Identity.IsAuthenticated)
+            {
+                var user = await UserManager.GetUserAsync(User);
+                if (user != null && !(await UserManager.IsInRoleAsync(user, "Admin") || await UserManager.IsInRoleAsync(user, "Staff")) && ViewBag.HasPurchased)
+                {
+                    var existingReview = Model.Reviews.FirstOrDefault(r => r.UserId == user.Id && r.ParentReviewId == null);
+                    if (existingReview == null)
                     {
-                        var user = await UserManager.GetUserAsync(User);
-                        bool isAdmin = user != null && await UserManager.IsInRoleAsync(user, "Admin");
-                        bool isMember = user != null && !(await UserManager.IsInRoleAsync(user, "Admin")
-                        || await UserManager.IsInRoleAsync(user, "Staff"));
-
-                        @* Members can add to cart (unless it’s upcoming or out of stock) *@
-                        if (isMember)
-                        {
-                            <div class="flex items-center gap-4">
-                                <div class="flex items-center">
-                                    <button type="button"
-                                            onclick="updateQuantity(-1)"
-                                            class="px-3 py-1 bg-gray-300 rounded-l hover:bg-gray-400"
-                                            id="decrement-btn">
-                                        −
-                                    </button>
-                                    <input type="text"
-                                           id="quantity"
-                                           class="w-12 text-center border-t border-b border-gray-300"
-                                           value="1" readonly />
-                                    <button type="button"
-                                            onclick="updateQuantity(1)"
-                                            class="px-3 py-1 bg-gray-300 rounded-r hover:bg-gray-400"
-                                            id="increment-btn">
-                                        +
-                                    </button>
+                        <div class="mt-4">
+                            <h4 class="text-md font-semibold text-amber-800 mb-2">Write a Review</h4>
+                            <form id="review-form" method="post">
+                                <input type="hidden" name="bookId" value="@Model.Book.Id" />
+                                <div class="mb-4">
+                                    <label class="block text-gray-700 text-sm font-semibold mb-2">Rating (1-5)</label>
+                                    <select name="rating" id="review-rating" class="w-full p-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                        @for (int i = 1; i <= 5; i++)
+                                        {
+                                            <option value="@i">@i</option>
+                                        }
+                                    </select>
+                                    <span id="rating-error" class="text-red-600 text-sm hidden"></span>
                                 </div>
-                                <form id="add-to-cart-form" class="inline-block">
-                                    <input type="hidden" id="add-to-cart-quantity" name="quantity" value="1" />
-                                    <button type="button"
-                                            onclick="addToCart(@Model.Book.Id)"
-                                            class="bg-[#fbbf24] text-[#4b2e83] font-semibold py-2 px-6 rounded-full hover:bg-[#f8d267] transition
-                                                   @(Model.Book.Quantity == 0 || isUpcoming ? "opacity-50 cursor-not-allowed" : "")"
-                                    @(Model.Book.Quantity == 0 || isUpcoming ? "disabled" : "")>
-                                        Add to Cart
-                                    </button>
-                                </form>
-                            </div>
-                            <div id="cart-message" class="message"></div>
-                        }
-                        else if (isAdmin)
-                        {
-                            <div class="flex gap-3">
-                                <a asp-action="Edit" asp-route-id="@Model.Book.Id"
-                                   class="bg-[#4b2e83] text-white py-2 px-4 rounded hover:bg-[#3c226a]">
-                                    Edit
-                                </a>
-                                <a asp-action="Delete" asp-route-id="@Model.Book.Id"
-                                   class="bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700">
-                                    Delete
-                                </a>
-                                <a asp-action="ManageDiscounts" asp-route-id="@Model.Book.Id"
-                                   class="bg-[#4b2e83] text-white py-2 px-4 rounded hover:bg-[#3c226a]">
-                                    Discounts
-                                </a>
-                            </div>
-                        }
+                                <div class="mb-4">
+                                    <label class="block text-gray-700 text-sm font-semibold mb-2">Comment</label>
+                                    <textarea name="comment" id="review-comment" class="w-full p-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" rows="5"></textarea>
+                                    <span id="comment-error" class="text-red-600 text-sm hidden"></span>
+                                </div>
+                                <button type="button" onclick="submitReview()" class="inline-block bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-amber-700">Submit Review</button>
+                            </form>
+                            <div id="review-message" class="message"></div>
+                        </div>
                     }
-                </div>
+                }
+            }
+        </div>
+        <!-- Recommendations Section -->
+        <div class="mt-8">
+            <h3 class="text-lg font-semibold text-amber-800 mb-4">Recommendations</h3>
+            <div class="mb-6">
+                <h4 class="text-md font-semibold text-gray-700 mb-2">Most Rated Books</h4>
+                @if (ViewBag.MostRatedBooks != null && ViewBag.MostRatedBooks.Count > 0)
+                {
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        @foreach (var recommendedBook in ViewBag.MostRatedBooks as List<BookWithDiscountViewModel>)
+                        {
+                            var book = recommendedBook.Book;
+                            <div class="recommendation-card bg-amber-50 rounded-lg shadow-md p-4 flex flex-col">
+                                @if (!string.IsNullOrEmpty(book.CoverImageUrl))
+                                {
+                                    <a asp-controller="Books" asp-action="Details" asp-route-id="@book.Id">
+                                        <img src="@book.CoverImageUrl" alt="@book.Title" class="w-full h-36 object-cover rounded mb-2" />
+                                    </a>
+                                }
+                                else
+                                {
+                                    <div class="w-full h-36 bg-gray-200 flex items-center justify-center rounded mb-2">
+                                        <span class="text-sm">No Image</span>
+                                    </div>
+                                }
+                                <h5 class="text-base font-semibold text-amber-800 mb-1">
+                                    <a asp-controller="Books" asp-action="Details" asp-route-id="@book.Id">@book.Title</a>
+                                </h5>
+                                <p class="text-gray-600 text-sm mb-1">by @book.Author</p>
+                                <p class="text-gray-600 text-sm">Price: $@book.Price</p>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="text-gray-600 text-sm">No recommendations available.</p>
+                }
             </div>
 
-            <!-- Additional Details -->
-            <section class="mt-12">
-                <h2 class="text-xl font-semibold text-[#4b2e83] mb-4 border-b border-amber-200 pb-2">
-                    Additional Details
-                </h2>
-                <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-gray-700">
-                    <div><dt class="font-medium">Genre:</dt> <dd>@(Model.Book.Genre ?? "–")</dd></div>
-                    <div>
-                        <dt class="font-medium">Publication:</dt>
-                        <dd>
-                            @(Model.Book.PublicationDate != DateTime.MinValue
-                                ? Model.Book.PublicationDate.ToString("d MMM yyyy")
-                                : "–")
-                        </dd>
+            <div>
+                <h4 class="text-md font-semibold text-gray-700 mb-2">Most Ordered Books</h4>
+                @if (ViewBag.MostOrderedBooks != null && ViewBag.MostOrderedBooks.Count > 0)
+                {
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        @foreach (var recommendedBook in ViewBag.MostOrderedBooks as List<BookWithDiscountViewModel>)
+                        {
+                            var book = recommendedBook.Book;
+                            <div class="recommendation-card bg-amber-50 rounded-lg shadow-md p-4 flex flex-col">
+                                @if (!string.IsNullOrEmpty(book.CoverImageUrl))
+                                {
+                                    <a asp-controller="Books" asp-action="Details" asp-route-id="@book.Id">
+                                        <img src="@book.CoverImageUrl" alt="@book.Title" class="w-full h-36 object-cover rounded mb-2" />
+                                    </a>
+                                }
+                                else
+                                {
+                                    <div class="w-full h-36 bg-gray-200 flex items-center justify-center rounded mb-2">
+                                        <span class="text-sm">No Image</span>
+                                    </div>
+                                }
+                                <h5 class="text-base font-semibold text-amber-800 mb-1">
+                                    <a asp-controller="Books" asp-action="Details" asp-route-id="@book.Id">@book.Title</a>
+                                </h5>
+                                <p class="text-gray-600 text-sm mb-1">by @book.Author</p>
+                                <p class="text-gray-600 text-sm">Price: $@book.Price</p>
+                            </div>
+                        }
                     </div>
-                    <div><dt class="font-medium">ISBN:</dt> <dd>@(Model.Book.ISBN ?? "–")</dd></div>
-                    <div><dt class="font-medium">Language:</dt> <dd>@(Model.Book.Language ?? "–")</dd></div>
-                    <div><dt class="font-medium">Format:</dt> <dd>@(Model.Book.Format ?? "–")</dd></div>
-                    <div><dt class="font-medium">Publisher:</dt> <dd>@(Model.Book.Publisher ?? "–")</dd></div>
-                    <div>
-                        <dt class="font-medium">Library Access:</dt>
-                        <dd>@(Model.Book.IsPhysicalLibraryAccess ? "Yes" : "No")</dd>
-                    </div>
-                    <div>
-                        <dt class="font-medium">Bestseller:</dt>
-                        <dd>@(Model.Book.IsBestseller ? "Yes" : "No")</dd>
-                    </div>
-                    <div>
-                        <dt class="font-medium">Award Winner:</dt>
-                        <dd>@(Model.Book.IsAwardWinner ? "Yes" : "No")</dd>
-                    </div>
-                    <div>
-                        <dt class="font-medium">Coming Soon:</dt>
-                        <dd>@(Model.Book.IsComingSoon ? "Yes" : "No")</dd>
-                    </div>
-                    <div>
-                        <dt class="font-medium">Release Date:</dt>
-                        <dd>
-                            @(Model.Book.ReleaseDate.HasValue
-                                ? Model.Book.ReleaseDate.Value.ToString("d MMM yyyy")
-                                : "–")
-                        </dd>
-                    </div>
-                </dl>
-            </section>
+                }
+                else
+                {
+                    <p class="text-gray-600 text-sm">No recommendations available.</p>
+                }
+            </div>
+        </div>
+
+
+
+        <div class="mt-6 text-center">
+            <a asp-controller="Books" asp-action="Index" class="inline-block bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-600">Back to Books</a>
         </div>
     </div>
 </div>
@@ -235,47 +383,219 @@
 @section Scripts {
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-        // Qty controls
         const quantityInput = document.getElementById('quantity');
-        const addToCartQty = document.getElementById('add-to-cart-quantity');
-        const dec = document.getElementById('decrement-btn');
-        const inc = document.getElementById('increment-btn');
-        const maxQty = @Model.Book.Quantity;
+        const addToCartQuantity = document.getElementById('add-to-cart-quantity');
+        const maxQuantity = @Model.Book.Quantity;
+        const decrementBtn = document.getElementById('decrement-btn');
+        const incrementBtn = document.getElementById('increment-btn');
         const basePrice = @Model.IsDiscountActive ? @Model.DiscountedPrice : @Model.Book.Price;
-        const totalEl = document.getElementById('total-price');
-        const msgEl   = document.getElementById('cart-message');
+        const totalPriceDisplay = document.getElementById('total-price');
+        const cartMessage = document.getElementById('cart-message');
 
-        function updateQuantity(delta) {
-            let q = parseInt(quantityInput.value) + delta;
-            q = Math.max(1, Math.min(maxQty, q));
-            quantityInput.value = q;
-            addToCartQty.value = q;
+        function updateQuantity(change) {
+            let currentQuantity = parseInt(quantityInput.value);
+            let newQuantity = currentQuantity + change;
+
+            if (newQuantity < 1) {
+                newQuantity = 1;
+            }
+            if (newQuantity > maxQuantity) {
+                newQuantity = maxQuantity;
+            }
+
+            quantityInput.value = newQuantity;
+            addToCartQuantity.value = newQuantity;
+
+            // Update total price
+            const totalPrice = basePrice * newQuantity;
+            totalPriceDisplay.textContent = totalPrice.toFixed(2);
+
+            decrementBtn.disabled = newQuantity <= 1;
+            incrementBtn.disabled = newQuantity >= maxQuantity;
         }
 
         function addToCart(bookId) {
-            const form = new FormData(document.getElementById('add-to-cart-form'));
-            form.append('id', bookId);
+            const quantity = parseInt(quantityInput.value);
+            const form = document.getElementById('add-to-cart-form');
+            const formData = new FormData(form);
+            formData.append('id', bookId);
 
             $.ajax({
                 url: '@Url.Action("AddToCart", "Books")',
                 type: 'POST',
-                data: form,
+                data: formData,
                 processData: false,
                 contentType: false,
-                headers:{ 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val() },
-                success(res) {
-                    msgEl.className = 'message ' + (res.success ? 'success-message' : 'error-message');
-                    msgEl.textContent = res.message;
-                    msgEl.style.display = 'block';
-                    setTimeout(()=> msgEl.style.display='none', 3000);
+                headers: {
+                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
                 },
-                error(err) {
-                    msgEl.className = 'message error-message';
-                    msgEl.textContent = 'Add to cart failed';
-                    msgEl.style.display='block';
-                    setTimeout(()=> msgEl.style.display='none',3000);
+                success: function (response) {
+                    if (response.success) {
+                        cartMessage.className = 'message success-message';
+                        cartMessage.textContent = "Cart was added";
+                        cartMessage.style.display = 'block';
+                        setTimeout(() => cartMessage.style.display = 'none', 3000);
+                    } else {
+                        cartMessage.className = 'message error-message';
+                        cartMessage.textContent = "Cart was not added: " + response.message;
+                        cartMessage.style.display = 'block';
+                        setTimeout(() => cartMessage.style.display = 'none', 3000);
+                    }
+                },
+                error: function (xhr, status, error) {
+                    cartMessage.className = 'message error-message';
+                    cartMessage.textContent = 'An error occurred while adding to cart: ' + (xhr.responseText || error);
+                    cartMessage.style.display = 'block';
+                    setTimeout(() => cartMessage.style.display = 'none', 3000);
                 }
             });
         }
+
+        function submitReview() {
+            const form = document.getElementById('review-form');
+            const formData = new FormData(form);
+            const rating = parseInt(formData.get('rating'));
+            const comment = formData.get('comment').trim();
+            const reviewMessage = document.getElementById('review-message');
+            const reviewsList = document.getElementById('reviews-list');
+            const ratingError = document.getElementById('rating-error');
+            const commentError = document.getElementById('comment-error');
+
+            // Reset error messages
+            ratingError.style.display = 'none';
+            commentError.style.display = 'none';
+
+            // Client-side validation
+            let valid = true;
+            if (rating < 1 || rating > 5) {
+                ratingError.textContent = "Rating must be between 1 and 5.";
+                ratingError.style.display = 'block';
+                valid = false;
+            }
+            if (!comment) {
+                commentError.textContent = "Comment is required.";
+                commentError.style.display = 'block';
+                valid = false;
+            }
+
+            if (!valid) return;
+
+            $.ajax({
+                url: '@Url.Action("Create", "Reviews")',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                },
+                success: function (response) {
+                    if (response.success) {
+                        reviewMessage.className = 'message success-message';
+                        reviewMessage.textContent = response.message;
+                        reviewMessage.style.display = 'block';
+                        setTimeout(() => reviewMessage.style.display = 'none', 3000);
+
+                        // Add the new review to the list
+                        const reviewHtml = `
+                            <div class="review-item">
+                                <div class="flex items-center mb-2">
+                                    <div class="star-rating">
+                                        ${Array(response.review.rating).fill('★').join('')}${Array(5 - response.review.rating).fill('<span class="empty">★</span>').join('')}
+                                    </div>
+                                    <span class="text-gray-600 text-sm ml-2">${response.review.userName}</span>
+                                    <span class="text-gray-500 text-xs ml-2">${response.review.reviewDate}</span>
+                                </div>
+                                <p class="text-gray-600 text-sm">${response.review.comment}</p>
+                                <div class="replies mt-2"></div>
+                            </div>
+                        `;
+                        reviewsList.insertAdjacentHTML('beforeend', reviewHtml);
+
+                        // Clear the form
+                        document.getElementById('review-comment').value = '';
+                        document.getElementById('review-rating').value = '1';
+                    } else {
+                        reviewMessage.className = 'message error-message';
+                        reviewMessage.textContent = response.message;
+                        reviewMessage.style.display = 'block';
+                        setTimeout(() => reviewMessage.style.display = 'none', 3000);
+                    }
+                },
+                error: function (xhr, status, error) {
+                    reviewMessage.className = 'message error-message';
+                    reviewMessage.textContent = 'An error occurred while submitting your review: ' + (xhr.responseText || error);
+                    reviewMessage.style.display = 'block';
+                    setTimeout(() => reviewMessage.style.display = 'none', 3000);
+                }
+            });
+        }
+
+        function submitReply(reviewId) {
+            const form = document.getElementById('reply-form-' + reviewId);
+            const formData = new FormData(form);
+            const comment = formData.get('comment').trim();
+            const replyMessage = document.getElementById('reply-message-' + reviewId);
+            const commentError = document.getElementById('reply-comment-error-' + reviewId);
+
+            // Reset error messages
+            commentError.style.display = 'none';
+
+            // Client-side validation
+            if (!comment) {
+                commentError.textContent = "Comment is required.";
+                commentError.style.display = 'block';
+                return;
+            }
+
+            $.ajax({
+                url: '@Url.Action("CreateReply", "Reviews")',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                },
+                success: function (response) {
+                    if (response.success) {
+                        replyMessage.className = 'message success-message';
+                        replyMessage.textContent = response.message;
+                        replyMessage.style.display = 'block';
+                        setTimeout(() => replyMessage.style.display = 'none', 3000);
+
+                        // Add the new reply to the list
+                        const replyHtml = `
+                            <div class="reply-item">
+                                <div class="flex items-center mb-1">
+                                    <span class="text-gray-600 text-sm font-semibold">${response.reply.userName}</span>
+                                    <span class="text-gray-500 text-xs ml-2">${response.reply.reviewDate}</span>
+                                </div>
+                                <p class="text-gray-600 text-sm">${response.reply.comment}</p>
+                            </div>
+                        `;
+                        const repliesContainer = form.parentElement.querySelector('.replies');
+                        repliesContainer.insertAdjacentHTML('beforeend', replyHtml);
+
+                        // Clear the form
+                        form.querySelector('textarea[name="comment"]').value = '';
+                    } else {
+                        replyMessage.className = 'message error-message';
+                        replyMessage.textContent = response.message;
+                        replyMessage.style.display = 'block';
+                        setTimeout(() => replyMessage.style.display = 'none', 3000);
+                    }
+                },
+                error: function (xhr, status, error) {
+                    replyMessage.className = 'message error-message';
+                    replyMessage.textContent = 'An error occurred while submitting your reply: ' + (xhr.responseText || error);
+                    replyMessage.style.display = 'block';
+                    setTimeout(() => replyMessage.style.display = 'none', 3000);
+                }
+            });
+        }
+
+        decrementBtn.disabled = quantityInput.value <= 1;
+        incrementBtn.disabled = quantityInput.value >= maxQuantity;
     </script>
 }

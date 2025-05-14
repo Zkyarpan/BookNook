@@ -1,27 +1,54 @@
 ﻿@model IEnumerable<BookNook.Models.BookWithDiscountViewModel>
+@using BookNook.Models
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
 @inject UserManager<BookNook.Models.ApplicationUser> UserManager
+@inject BookNook.Data.ApplicationDbContext _context
 
 @{
     ViewData["Title"] = "Books";
+
+    // current user & role
+    var currentUser = await UserManager.GetUserAsync(User);
+    bool isAdmin = currentUser != null && await UserManager.IsInRoleAsync(currentUser, "Admin");
+
+    // pagination vars
+    int currentPage = ViewBag.CurrentPage;
+    int totalPages = ViewBag.TotalPages;
+    int prevPage = currentPage > 1 ? currentPage - 1 : 1;
+    int nextPage = currentPage < totalPages ? currentPage + 1 : totalPages;
+
+    // Static lists
+    var formats = new[] { "", "paperback", "hardcover", "signed", "limited", "first", "collectors", "authors", "deluxe" };
+    var genres = new[] { "", "Fiction", "Science Fiction", "Romance", "Mystery", "Poetry", "Biography", "Self-Help" };
+    var sortOptions = new Dictionary<string, string>
+            {
+                ["title"] = "Title A → Z",
+                ["author"] = "Author A → Z",
+                ["price"] = "Price: Low → High",
+                ["publicationdate"] = "Newest Releases"
+            };
+
+    string selectedSort = Convert.ToString(ViewBag.Sort);
+    string selectedGenre = Convert.ToString(ViewBag.Genre)?.ToLower() ?? "";
+    string selectedFormat = Convert.ToString(ViewBag.Format) ?? "";
 }
 
 <div class="container mx-auto max-w-7xl px-6 py-8">
-    <!-- Actions -->
+    <!-- header + action button -->
     <div class="flex justify-between items-center mb-8">
         <h1 class="text-3xl font-bold text-amber-900">Our Book Collection</h1>
-        @if (User.Identity.IsAuthenticated)
+        @if (currentUser != null)
         {
-            var user = await UserManager.GetUserAsync(User);
-            if (user != null && await UserManager.IsInRoleAsync(user, "Admin"))
+            @if (isAdmin)
             {
-                <a asp-action="Create" class="bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold py-2 px-4 rounded shadow">
+                <a asp-action="Create" class="bg-amber-600 hover:bg-amber-700 text-white py-2 px-4 rounded shadow">
                     + Add New Book
                 </a>
             }
-            else if (user != null)
+            else
             {
-                <a asp-controller="Cart" asp-action="Whitelist" class="bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold py-2 px-4 rounded shadow">
+                <a asp-controller="Cart" asp-action="Whitelist" class="bg-amber-600 hover:bg-amber-700 text-white py-2 px-4 rounded shadow">
                     View Wishlist
                 </a>
             }
@@ -29,30 +56,81 @@
     </div>
 
     <div class="flex flex-col lg:flex-row gap-8">
+
         <!-- Sidebar Filters -->
         <aside class="lg:w-1/4 bg-white rounded-lg shadow-lg p-6">
             <h2 class="text-xl font-semibold text-gray-800 mb-4">Filter & Sort</h2>
             <form asp-action="Index" method="get" id="filterForm" class="space-y-4">
-                <div>
-                    <input name="search" value="@ViewBag.Search" placeholder="Search books..."
-                           class="w-full border border-gray-300 rounded px-4 py-2 focus:ring-amber-500 focus:border-amber-500" />
-                </div>
-                <div>
-                    <select name="sort" class="w-full border border-gray-300 rounded px-4 py-2 focus:ring-amber-500 focus:border-amber-500">
-                        <option value="title" selected="@(ViewBag.Sort=="title")">Sort by Title</option>
-                        <option value="author" selected="@(ViewBag.Sort=="author")">Sort by Author</option>
-                        <option value="price" selected="@(ViewBag.Sort=="price")">Sort by Price</option>
-                        <option value="publicationdate" selected="@(ViewBag.Sort=="publicationdate")">Sort by Newest</option>
-                    </select>
-                </div>
+                <!-- Search -->
+                <input name="search" value="@ViewBag.Search" placeholder="Search by title, ISBN, or description"
+                       class="w-full border border-gray-300 rounded px-4 py-2 focus:ring-amber-500 focus:border-amber-500" />
+
+                <!-- Sort -->
+                <select name="sort" class="w-full border rounded px-4 py-2">
+                    @foreach (var kv in sortOptions)
+                    {
+                        if (kv.Key == selectedSort)
+                        {
+                            <option value="@kv.Key" selected>@kv.Value</option>
+                        }
+                        else
+                        {
+                            <option value="@kv.Key">@kv.Value</option>
+                        }
+                    }
+                </select>
+
+                <!-- Genre -->
+                <select name="genre" class="w-full border rounded px-4 py-2">
+                    @foreach (var g in genres)
+                    {
+                        var lower = g.ToLower();
+                        var label = string.IsNullOrEmpty(g) ? "All Genres" : g;
+                        if (lower == selectedGenre)
+                        {
+                            <option value="@lower" selected>@label</option>
+                        }
+                        else
+                        {
+                            <option value="@lower">@label</option>
+                        }
+                    }
+                </select>
+
+                <!-- Format -->
+                <select name="format" class="w-full border rounded px-4 py-2">
+                    @foreach (var f in formats)
+                    {
+                        var label = string.IsNullOrEmpty(f)
+                        ? "All Formats"
+                        : System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(f);
+                        if (f == selectedFormat)
+                        {
+                            <option value="@f" selected>@label</option>
+                        }
+                        else
+                        {
+                            <option value="@f">@label</option>
+                        }
+                    }
+                </select>
+
+                <!-- Price Range -->
                 <div class="grid grid-cols-2 gap-2">
                     <input name="minPrice" value="@ViewBag.MinPrice" type="number" step="0.01" placeholder="Min $"
                            class="border border-gray-300 rounded px-3 py-2 focus:ring-amber-500 focus:border-amber-500" />
                     <input name="maxPrice" value="@ViewBag.MaxPrice" type="number" step="0.01" placeholder="Max $"
                            class="border border-gray-300 rounded px-3 py-2 focus:ring-amber-500 focus:border-amber-500" />
                 </div>
-                <button type="submit" class="w-full bg-amber-600 hover:bg-amber-700 text-white py-2 rounded font-semibold">Apply Filters</button>
-                <button type="button" onclick="resetFilters()" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded font-medium">Reset</button>
+
+                <!-- Apply / Reset -->
+                <button type="submit" class="w-full bg-amber-600 hover:bg-amber-700 text-white py-2 rounded font-semibold">
+                    Apply Filters
+                </button>
+                <button type="button" onclick="resetFilters()"
+                        class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded font-medium">
+                    Reset
+                </button>
             </form>
         </aside>
 
@@ -62,8 +140,32 @@
                 @foreach (var item in Model)
                 {
                     var b = item.Book;
-                    <div class="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-200">
+                    var reviews = b.Reviews?.Where(r => r.ParentReviewId == null).ToList() ?? new List<Review>();
+                    double avg = reviews.Any() ? reviews.Average(r => r.Rating) : 0;
+                    int fullStars = (int)avg;
+                    bool halfStar = (avg - fullStars) >= 0.5;
+                    int emptyStars = 5 - fullStars - (halfStar ? 1 : 0);
+
+                    <div class="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition duration-200 flex flex-col h-full">
                         <div class="relative">
+
+                            @* Wishlist button *@
+                            @if (currentUser != null && !isAdmin)
+                            {
+                                bool inWishlist = _context.Whitelists
+                                .Any(w => w.UserId == currentUser.Id && w.BookId == b.Id);
+                                <button class="wishlist-btn absolute top-2 left-2 focus:outline-none transition-colors"
+                                        data-book-id="@b.Id" aria-label="Toggle wishlist"
+                                        style="color:@(inWishlist?"#e53e3e":"#cbd5e0")">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24"
+                                         fill="@(inWishlist?"currentColor":"none")" stroke="currentColor" stroke-width="2"
+                                         stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M20.8 4.6c-1.4-1.4-3.6-1.4-5 0L12 8.4 8.2 4.6c-1.4-1.4-3.6-1.4-5 0s-1.4 3.6 0 5L12 21.8l8.8-12.2c1.4-1.4 1.4-3.6 0-5z" />
+                                    </svg>
+                                </button>
+                            }
+
+                            @* Cover image *@
                             @if (!string.IsNullOrEmpty(b.CoverImageUrl))
                             {
                                 <img src="@b.CoverImageUrl" alt="@b.Title" class="w-full h-56 object-cover" />
@@ -74,16 +176,44 @@
                                     <span class="text-gray-400">No Cover</span>
                                 </div>
                             }
+
                             @if (item.OnSaleFlag)
                             {
-                                <span class="absolute top-2 right-2 bg-red-600 text-white text-xs font-semibold px-2 py-1 rounded">SALE</span>
+                                <span class="absolute top-2 right-2 bg-red-600 text-white text-xs px-2 py-1 rounded">SALE</span>
                             }
                         </div>
-                        <div class="p-4 flex flex-col h-full">
-                            <h3 class="text-lg font-semibold text-amber-900 mb-1 line-clamp-2">
+
+                        <div class="p-4 flex flex-col flex-grow">
+                            <h3 class="text-lg font-semibold text-amber-900 line-clamp-2 mb-1">
                                 <a asp-action="Details" asp-route-id="@b.Id" class="hover:underline">@b.Title</a>
                             </h3>
                             <p class="text-sm text-gray-600 mb-2">by @b.Author</p>
+
+                            <div class="flex items-center mb-2">
+                                @for (int i = 0; i < fullStars; i++)
+                                {
+                                    <span class="text-amber-500">★</span>
+                                }
+                                @if (halfStar)
+                                {
+                                    <span class="text-amber-500">☆</span>
+                                }
+                                @for (int i = 0; i < emptyStars; i++)
+                                {
+                                    <span class="text-gray-300">★</span>
+                                }
+                                <span class="text-xs text-gray-500 ml-2">(@reviews.Count)</span>
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(b.Genre))
+                            {
+                                <span class="inline-block text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded mb-2">
+                                    @b.Genre
+                                </span>
+                            }
+
+                            <p class="text-sm text-gray-700 line-clamp-3 mb-4">@b.Description</p>
+
                             <div class="mt-auto">
                                 @if (item.IsDiscountActive)
                                 {
@@ -94,17 +224,18 @@
                                 {
                                     <p class="text-gray-800 text-xl font-bold">$@b.Price</p>
                                 }
-                                <p class="text-xs text-gray-500 mt-1">Stock: <span class="@(b.Quantity>0?"text-green-600":"text-red-600")">@(b.Quantity > 0 ? b.Quantity.ToString() : "Out")</span></p>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    Stock: <span class="@(b.Quantity>0?"text-green-600":"text-red-600")">
+                                        @(b.Quantity > 0 ? b.Quantity.ToString() : "Out")
+                                    </span>
+                                </p>
 
-                                @* Add to Cart button for customers *@
-                                @if (User.Identity.IsAuthenticated)
+                                @if (currentUser != null && !isAdmin)
                                 {
-                                    var user2 = await UserManager.GetUserAsync(User);
-                                    if (user2 != null && !(await UserManager.IsInRoleAsync(user2, "Admin")))
-                                    {
-                                        <a asp-action="Details" asp-route-id="@b.Id"
-                                           class="block mt-4 bg-amber-600 hover:bg-amber-700 text-white text-center py-2 rounded font-medium">View</a>
-                                    }
+                                    <a asp-action="Details" asp-route-id="@b.Id"
+                                       class="block mt-4 bg-amber-600 hover:bg-amber-700 text-white py-2 rounded text-center font-medium">
+                                        View Details
+                                    </a>
                                 }
                             </div>
                         </div>
@@ -113,20 +244,32 @@
             </div>
 
             <!-- Pagination -->
-            @if (ViewBag.TotalPages > 1)
+            @if (totalPages > 1)
             {
                 <nav class="mt-8 flex justify-center">
-                    <ul class="inline-flex -space-x-px">
-                        @for (int i = 1; i <= ViewBag.TotalPages; i++)
+                    <ul class="inline-flex items-center -space-x-px">
+                        <li>
+                            <a asp-action="Index" asp-route-page="@prevPage"
+                               class="px-3 py-1 text-sm rounded-l-lg border @(currentPage==1?"bg-gray-200 text-gray-500 cursor-not-allowed":"bg-white text-amber-600 hover:bg-amber-50")">
+                                Previous
+                            </a>
+                        </li>
+                        @for (int i = 1; i <= totalPages; i++)
                         {
-                            var active = i == ViewBag.CurrentPage;
+                            bool active = i == currentPage;
                             <li>
                                 <a asp-action="Index" asp-route-page="@i"
-                                   class="px-4 py-2 text-sm font-medium rounded-l-lg border @(active?"bg-amber-600 text-white":"bg-white text-amber-600 hover:bg-amber-100")">
+                                   class="px-3 py-1 text-sm border @(active?"bg-amber-600 text-white":"bg-white text-amber-600 hover:bg-amber-50")">
                                     @i
                                 </a>
                             </li>
                         }
+                        <li>
+                            <a asp-action="Index" asp-route-page="@nextPage"
+                               class="px-3 py-1 text-sm rounded-r-lg border @(currentPage==totalPages?"bg-gray-200 text-gray-500 cursor-not-allowed":"bg-white text-amber-600 hover:bg-amber-50")">
+                                Next
+                            </a>
+                        </li>
                     </ul>
                 </nav>
             }
@@ -137,7 +280,36 @@
 @section Scripts {
     <script>
         function resetFilters() {
-            window.location = '@Url.Action("Index", "Books")';
+          window.location = '@Url.Action("Index", "Books")';
         }
+
+        document.querySelectorAll('.wishlist-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const bookId = btn.dataset.bookId;
+            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            const formData = new FormData();
+            formData.append('id', bookId);
+            formData.append('__RequestVerificationToken', token);
+
+            const response = await fetch('@Url.Action("ToggleWishlist", "Books")', {
+              method: 'POST',
+              body: formData
+            });
+            const data = await response.json();
+            if (data.success) {
+              const svg = btn.querySelector('svg');
+              if (data.inWishlist) {
+                svg.setAttribute('fill','currentColor');
+                btn.style.color = '#e53e3e';
+              } else {
+                svg.setAttribute('fill','none');
+                btn.style.color = '#cbd5e0';
+              }
+            } else {
+              alert(data.message);
+            }
+          });
+        });
     </script>
 }

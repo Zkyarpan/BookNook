@@ -296,38 +296,44 @@ namespace BookNook.Controllers
 
         private async Task SendEmailAsync(string email, string subject, string htmlMessage)
         {
-            if (string.IsNullOrEmpty(email))
+            var cfg = _configuration.GetSection("Smtp");
+            var host = cfg["Host"];
+            var port = cfg["Port"];
+            var user = cfg["Username"];
+            var pass = cfg["Password"];
+            var fromAddr = cfg["SenderEmail"];
+            var fromName = cfg["SenderName"];
+
+            if (string.IsNullOrWhiteSpace(host)
+             || string.IsNullOrWhiteSpace(port)
+             || string.IsNullOrWhiteSpace(user)
+             || string.IsNullOrWhiteSpace(pass))
             {
-                throw new ArgumentNullException(nameof(email), "Email address cannot be null or empty.");
+                throw new InvalidOperationException(
+                    "SMTP configuration is missing or incomplete in appsettings.json (Smtp).");
             }
 
-            var smtpHost = _configuration["Smtp:Host"];
-            var smtpPort = _configuration["Smtp:Port"];
-            var smtpUsername = _configuration["Smtp:Username"];
-            var smtpPassword = _configuration["Smtp:Password"];
-
-            if (string.IsNullOrEmpty(smtpHost) || string.IsNullOrEmpty(smtpPort) || string.IsNullOrEmpty(smtpUsername) || string.IsNullOrEmpty(smtpPassword))
+            using var smtp = new SmtpClient(host)
             {
-                throw new InvalidOperationException("SMTP configuration is missing or incomplete in appsettings.json.");
-            }
-
-            var smtpClient = new SmtpClient(smtpHost)
-            {
-                Port = int.Parse(smtpPort),
-                Credentials = new NetworkCredential(smtpUsername, smtpPassword),
+                Port = int.Parse(port),
                 EnableSsl = true,
+                DeliveryMethod = SmtpDeliveryMethod.Network,
+                UseDefaultCredentials = false,              
+                Credentials = new NetworkCredential(user, pass)
             };
 
-            var mailMessage = new MailMessage
+            var msg = new MailMessage()
             {
-                From = new MailAddress(smtpUsername),
+                From = new MailAddress(fromAddr, fromName),
                 Subject = subject,
                 Body = htmlMessage,
-                IsBodyHtml = true,
+                IsBodyHtml = true
             };
-            mailMessage.To.Add(email);
+            msg.To.Add(email);
 
-            await smtpClient.SendMailAsync(mailMessage);
+            await smtp.SendMailAsync(msg);
         }
+
+
     }
 }

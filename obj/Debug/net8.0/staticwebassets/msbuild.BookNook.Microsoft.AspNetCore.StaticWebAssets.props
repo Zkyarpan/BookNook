@@ -80,6 +80,38 @@
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
       <OriginalItemSpec>$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\images\book-covers\44fd23ce-1e45-4611-a0ae-ee21fdab0ac1_annie-spratt-e3mQgEV0Kpg-unsplash.jpg))</OriginalItemSpec>
     </StaticWebAsset>
+    <StaticWebAsset Include="$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\images\book-covers\52b47495-f6ec-4fe3-a57d-c8e92de55656_The_Great_Gatsby_Cover_1925_Retouched.jpg))">
+      <SourceType>Package</SourceType>
+      <SourceId>BookNook</SourceId>
+      <ContentRoot>$(MSBuildThisFileDirectory)..\staticwebassets\</ContentRoot>
+      <BasePath>_content/BookNook</BasePath>
+      <RelativePath>images/book-covers/52b47495-f6ec-4fe3-a57d-c8e92de55656_The_Great_Gatsby_Cover_1925_Retouched.jpg</RelativePath>
+      <AssetKind>All</AssetKind>
+      <AssetMode>All</AssetMode>
+      <AssetRole>Primary</AssetRole>
+      <RelatedAsset></RelatedAsset>
+      <AssetTraitName></AssetTraitName>
+      <AssetTraitValue></AssetTraitValue>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <OriginalItemSpec>$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\images\book-covers\52b47495-f6ec-4fe3-a57d-c8e92de55656_The_Great_Gatsby_Cover_1925_Retouched.jpg))</OriginalItemSpec>
+    </StaticWebAsset>
+    <StaticWebAsset Include="$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\images\book-covers\5f15b75c-731a-4d59-8d22-7868bcde3591_images.jpeg))">
+      <SourceType>Package</SourceType>
+      <SourceId>BookNook</SourceId>
+      <ContentRoot>$(MSBuildThisFileDirectory)..\staticwebassets\</ContentRoot>
+      <BasePath>_content/BookNook</BasePath>
+      <RelativePath>images/book-covers/5f15b75c-731a-4d59-8d22-7868bcde3591_images.jpeg</RelativePath>
+      <AssetKind>All</AssetKind>
+      <AssetMode>All</AssetMode>
+      <AssetRole>Primary</AssetRole>
+      <RelatedAsset></RelatedAsset>
+      <AssetTraitName></AssetTraitName>
+      <AssetTraitValue></AssetTraitValue>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <OriginalItemSpec>$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\images\book-covers\5f15b75c-731a-4d59-8d22-7868bcde3591_images.jpeg))</OriginalItemSpec>
+    </StaticWebAsset>
     <StaticWebAsset Include="$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\images\book-covers\7b258685-ee40-417c-b65e-307c67c19668_11098.jpg))">
       <SourceType>Package</SourceType>
       <SourceId>BookNook</SourceId>
@@ -96,12 +128,12 @@
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
       <OriginalItemSpec>$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\images\book-covers\7b258685-ee40-417c-b65e-307c67c19668_11098.jpg))</OriginalItemSpec>
     </StaticWebAsset>
-    <StaticWebAsset Include="$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\images\book-covers\a3a070c5-8f18-4469-bcee-33165fb5f89c_charlesdeluvio-EV2Y6-NzDyU-unsplash.jpg))">
+    <StaticWebAsset Include="$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\images\book-covers\b3d6e094-238d-4125-b750-943ad3da1f53_9780385550369.jpeg))">
       <SourceType>Package</SourceType>
       <SourceId>BookNook</SourceId>
       <ContentRoot>$(MSBuildThisFileDirectory)..\staticwebassets\</ContentRoot>
       <BasePath>_content/BookNook</BasePath>
-      <RelativePath>images/book-covers/a3a070c5-8f18-4469-bcee-33165fb5f89c_charlesdeluvio-EV2Y6-NzDyU-unsplash.jpg</RelativePath>
+      <RelativePath>images/book-covers/b3d6e094-238d-4125-b750-943ad3da1f53_9780385550369.jpeg</RelativePath>
       <AssetKind>All</AssetKind>
       <AssetMode>All</AssetMode>
       <AssetRole>Primary</AssetRole>
@@ -110,7 +142,23 @@
       <AssetTraitValue></AssetTraitValue>
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-      <OriginalItemSpec>$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\images\book-covers\a3a070c5-8f18-4469-bcee-33165fb5f89c_charlesdeluvio-EV2Y6-NzDyU-unsplash.jpg))</OriginalItemSpec>
+      <OriginalItemSpec>$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\images\book-covers\b3d6e094-238d-4125-b750-943ad3da1f53_9780385550369.jpeg))</OriginalItemSpec>
+    </StaticWebAsset>
+    <StaticWebAsset Include="$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\images\book-covers\dda2dab4-0e11-467a-8fdd-b7ca8b463378_charlesdeluvio-EV2Y6-NzDyU-unsplash.jpg))">
+      <SourceType>Package</SourceType>
+      <SourceId>BookNook</SourceId>
+      <ContentRoot>$(MSBuildThisFileDirectory)..\staticwebassets\</ContentRoot>
+      <BasePath>_content/BookNook</BasePath>
+      <RelativePath>images/book-covers/dda2dab4-0e11-467a-8fdd-b7ca8b463378_charlesdeluvio-EV2Y6-NzDyU-unsplash.jpg</RelativePath>
+      <AssetKind>All</AssetKind>
+      <AssetMode>All</AssetMode>
+      <AssetRole>Primary</AssetRole>
+      <RelatedAsset></RelatedAsset>
+      <AssetTraitName></AssetTraitName>
+      <AssetTraitValue></AssetTraitValue>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <OriginalItemSpec>$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\images\book-covers\dda2dab4-0e11-467a-8fdd-b7ca8b463378_charlesdeluvio-EV2Y6-NzDyU-unsplash.jpg))</OriginalItemSpec>
     </StaticWebAsset>
     <StaticWebAsset Include="$([System.IO.Path]::GetFullPath($(MSBuildThisFileDirectory)..\staticwebassets\images\profile-pics\0bc5457f-144b-406a-a2f9-c6c68fecd5bb_11098.jpg))">
       <SourceType>Package</SourceType>

@@ -144,7 +144,7 @@ namespace BookNook.Controllers
         // GET: Books/Index
         public async Task<IActionResult> Index(
             int page = 1,
-            int pageSize = 12,
+            int pageSize = 6,
             string search = "",
             string sort = "title",
             string category = "all",
@@ -335,6 +335,7 @@ namespace BookNook.Controllers
             // Set ViewBag properties for the view
             ViewBag.TotalPages = (int)Math.Ceiling((double)totalBooks / pageSize);
             ViewBag.CurrentPage = page;
+            ViewBag.PageSize = pageSize;
             ViewBag.Search = search;
             ViewBag.Sort = sort;
             ViewBag.Category = category;

@@ -65,12 +65,12 @@
                         <div class="flex items-baseline mb-2">
                             @if (item.IsDiscountActive)
                             {
-                                <span class="line-through text-slate-400 mr-2">$@b.Price:F2</span>
-                                <span class="text-[#4b2e83] font-semibold">$@unitPrice:F2</span>
+                                <span class="line-through text-slate-400 mr-2">$@b.Price</span>
+                                <span class="text-[#4b2e83] font-semibold">$@unitPrice</span>
                             }
                             else
                             {
-                                <span class="text-slate-700 font-semibold">$@unitPrice:F2</span>
+                                <span class="text-slate-700 font-semibold">$@unitPrice</span>
                             }
                         </div>
 
@@ -94,7 +94,7 @@
                         </div>
 
                         <p class="text-slate-700 font-medium mb-4" id="line-total-@b.Id">
-                            Total: $@(unitPrice * item.CartItem.Quantity):F2
+                            Total: $@(unitPrice * item.CartItem.Quantity)
                         </p>
 
                         <form asp-action="RemoveFromCart" method="post" class="mt-auto">
@@ -112,7 +112,7 @@
                 <p class="text-xl font-semibold text-[#4b2e83] mb-4">
                     Grand Total:
                     <span id="total-cart-price">
-                        $@Model.Sum(c => (c.IsDiscountActive ? c.DiscountedPrice : c.CartItem.Book.Price) * c.CartItem.Quantity):F2
+                        $@Model.Sum(c => (c.IsDiscountActive ? c.DiscountedPrice : c.CartItem.Book.Price) * c.CartItem.Quantity)
                     </span>
                 </p>
                 <a asp-action="Checkout" asp-controller="Cart"
